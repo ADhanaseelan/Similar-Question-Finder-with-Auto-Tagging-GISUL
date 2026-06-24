@@ -1,0 +1,38 @@
+type User @table {
+  username: String!
+  email: String!
+  avatarUrl: String
+  role: String
+}
+
+type Question @table {
+  title: String!
+  content: String!
+  createdAt: Timestamp!
+  status: String
+  author: User!
+  duplicateOf: Question
+}
+
+type Tag @table {
+  name: String!
+  slug: String!
+  description: String
+}
+
+type QuestionTag @table(key: ["question", "tag"]) {
+  question: Question!
+  tag: Tag!
+}
+
+type QuestionEmbedding @table {
+  question: Question!
+  vectorData: Vector @col(size: 768)
+}
+
+type Answer @table {
+  content: String!
+  createdAt: Timestamp!
+  question: Question!
+  author: User!
+}

@@ -1,0 +1,43 @@
+mutation SeedData @transaction {
+  user_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      username: "demouser1",
+      email: "user1@example.com",
+      role: "admin"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      username: "demouser2",
+      email: "user2@example.com",
+      role: "user"
+    }
+  ])
+  tag_insertMany(data: [
+    {
+      id: "a1b2c3d4-e5f6-7890-a1b2-c3d4e5f67890",
+      name: "Firebase",
+      slug: "firebase"
+    },
+    {
+      id: "b2c3d4e5-f6a7-8901-b2c3-d4e5f67890a1",
+      name: "GraphQL",
+      slug: "graphql"
+    }
+  ])
+  question_insertMany(data: [
+    {
+      id: "c3d4e5f6-a7b8-9012-c3d4-e5f67890a1b2",
+      title: "How to use FDC?",
+      content: "I am trying to learn Firebase Data Connect.",
+      createdAt: "2023-10-27T10:00:00Z",
+      authorId: "550e8400-e29b-41d4-a716-446655440000"
+    }
+  ])
+  questionTag_insertMany(data: [
+    {
+      questionId: "c3d4e5f6-a7b8-9012-c3d4-e5f67890a1b2",
+      tagId: "a1b2c3d4-e5f6-7890-a1b2-c3d4e5f67890"
+    }
+  ])
+}

@@ -1,0 +1,31 @@
+mutation CreateQuestion($title: String!, $content: String!) @auth(level: USER) {
+  question_insert(data: {
+    title: $title,
+    content: $content,
+    createdAt_time: { now: true },
+    author: { id_expr: "auth.uid" }
+  })
+}
+
+mutation PostAnswer($questionId: UUID!, $content: String!) @auth(level: USER) {
+  answer_insert(data: {
+    content: $content,
+    createdAt_time: { now: true },
+    question: { id: $questionId },
+    author: { id_expr: "auth.uid" }
+  })
+}
+
+query ListQuestions @auth(level: PUBLIC) {
+  questions(orderBy: [{createdAt: DESC}]) {
+    title
+    content
+    author {
+      username
+    }
+  }
+}
+
+mutation UpdateProfile($avatarUrl: String!) @auth(level: USER) {
+  user_update(key: {id_expr: "auth.uid"}, data: {avatarUrl: $avatarUrl})
+}

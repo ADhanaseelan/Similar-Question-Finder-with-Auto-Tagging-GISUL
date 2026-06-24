@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+pydantic[email]
+pydantic-settings
+firebase-admin
+python-jose[cryptography]
+passlib[bcrypt]
+sentence-transformers
+scikit-learn
+numpy
+python-dotenv
+
+
