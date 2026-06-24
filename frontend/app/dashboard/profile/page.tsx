@@ -1,26 +1,76 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, Settings, Shield, Bell, Save, Loader2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [message, setMessage] = useState({ text: "", type: "" });
   const [formData, setFormData] = useState({
-    name: "Student",
-    email: "student@example.com",
-    role: "Premium Member",
+    name: "",
+    email: "",
+    role: "Standard Member",
     notifications: true,
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        const res = await fetch("http://localhost:8000/api/users/me", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFormData(prev => ({
+            ...prev,
+            name: data.displayName || "",
+            email: data.email || ""
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to fetch profile", e);
+      } finally {
+        setFetching(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate save
-    setTimeout(() => {
+    setMessage({ text: "", type: "" });
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:8000/api/users/me", {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: formData.name })
+      });
+      if (res.ok) {
+        setMessage({ text: "Profile saved successfully!", type: "success" });
+      } else {
+        setMessage({ text: "Failed to update profile.", type: "error" });
+      }
+    } catch (e) {
+      setMessage({ text: "An error occurred.", type: "error" });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
+
+  if (fetching) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[70vh]">
+        <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Loading profile...</p>
+      </div>
+    );
+  }
 
   return (
     <motion.div 
@@ -67,6 +117,11 @@ export default function ProfilePage() {
             <h3 className="text-2xl font-bold text-foreground-light dark:text-foreground-dark mb-6">Account Details</h3>
             <form onSubmit={handleSave} className="space-y-6">
               <div className="space-y-4">
+                {message.text && (
+                  <div className={`p-3 rounded-xl text-sm font-bold ${message.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                    {message.text}
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Full Name</label>
                   <input 

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import connect_db, close_db
 from services.embedding_service import EmbeddingService
 from services.tagger_service import TopicTagger
-from routers import auth, questions, history, notes, dashboard, quiz
+from routers import auth, questions, history, notes, dashboard, quiz, users
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +32,7 @@ app.add_middleware(CORSMiddleware,
 )
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(questions.router, prefix="/api/questions", tags=["questions"])
 app.include_router(history.router, prefix="/api/history", tags=["history"])
 app.include_router(notes.router, prefix="/api/notes", tags=["notes"])

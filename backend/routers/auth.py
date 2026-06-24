@@ -81,3 +81,32 @@ async def google_login(payload: GoogleUser, db_service=Depends(get_db)):
 
     token = create_access_token({'sub': user_id})
     return {'access_token': token, 'token_type': 'bearer'}
+
+class PasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str
+
+from dependencies import get_current_user, CurrentUser
+
+@router.put('/password')
+async def update_password(
+    payload: PasswordUpdate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db_service = Depends(get_db)
+):
+    users_ref = db_service.reference(f'users/{current_user.id}')
+    user = users_ref.get()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if user.get("authProvider") == "google":
+        raise HTTPException(status_code=400, detail="Google users cannot change passwords here")
+
+    if not verify_password(payload.current_password, user['password']):
+        raise HTTPException(status_code=401, detail="Incorrect current password")
+        
+    hashed = hash_password(payload.new_password)
+    users_ref.update({"password": hashed})
+    
+    return {"status": "success"}
