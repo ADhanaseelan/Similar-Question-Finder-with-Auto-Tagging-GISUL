@@ -20,8 +20,8 @@ COPY backend/ ./
 # Copy the built frontend static files from Step 1
 COPY --from=frontend-builder /app/frontend/out /app/frontend/out
 
-# Expose the Render port
-EXPOSE 10000
+# Expose the Hugging Face Spaces port
+EXPOSE 7860
 
 # Run FastAPI
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]

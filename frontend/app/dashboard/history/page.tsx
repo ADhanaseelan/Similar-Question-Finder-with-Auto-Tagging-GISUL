@@ -1,17 +1,18 @@
 "use client";
-import { History, Clock, Tag, Search, Loader2 } from "lucide-react";
+import { History, Clock, Tag, Search, Loader2, Filter } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTopic, setSelectedTopic] = useState<string>("All");
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:8000/api/questions/history", {
+        const res = await fetch("/api/questions/history", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -27,17 +28,46 @@ export default function HistoryPage() {
     fetchHistory();
   }, []);
 
+  const uniqueTopics = useMemo(() => {
+    const topics = new Set(history.map(h => h.topic));
+    return ["All", ...Array.from(topics).sort()];
+  }, [history]);
+
+  const filteredHistory = useMemo(() => {
+    if (selectedTopic === "All") return history;
+    return history.filter(h => h.topic === selectedTopic);
+  }, [history, selectedTopic]);
+
   return (
     <div className="pb-12 space-y-8 max-w-5xl mx-auto">
-      <div className="mb-6 md:mb-8 text-center px-4">
-        <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
+      <div className="mb-6 md:mb-8 text-center px-4 flex flex-col items-center">
+        <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
           <History className="w-6 h-6 md:w-8 md:h-8 text-white" />
         </div>
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 tracking-tight">Your Question History</h1>
-        <p className="text-gray-500 mt-2 text-base md:text-lg max-w-2xl mx-auto">
+        <p className="text-gray-500 mt-2 text-base md:text-lg max-w-2xl">
           Review all the concepts you've explored and see how your knowledge has grown.
         </p>
       </div>
+
+      {/* FILTER SECTION */}
+      {!isLoading && history.length > 0 && (
+        <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 text-gray-600 font-bold">
+            <Filter className="w-5 h-5 text-indigo-500" />
+            <span>Filter by Topic:</span>
+          </div>
+          <select 
+            value={selectedTopic}
+            onChange={(e) => setSelectedTopic(e.target.value)}
+            className="bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none font-medium cursor-pointer"
+          >
+            {uniqueTopics.map((topic, idx) => (
+              <option key={idx} value={topic as string}>{topic}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-20">
@@ -49,13 +79,19 @@ export default function HistoryPage() {
           <h3 className="text-xl font-bold text-gray-800 mb-2">No History Found</h3>
           <p className="text-gray-500">You haven't asked any questions yet! Head over to the Ask Question page to get started.</p>
         </div>
+      ) : filteredHistory.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm max-w-2xl mx-auto">
+          <Filter className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-800 mb-2">No Results</h3>
+          <p className="text-gray-500">No questions found for the selected topic.</p>
+        </div>
       ) : (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-          {history.map((item, idx) => (
+          {filteredHistory.map((item, idx) => (
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.05 }}
+              transition={{ delay: Math.min(idx * 0.05, 0.5) }}
               key={item.id} 
               className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all group flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center"
             >

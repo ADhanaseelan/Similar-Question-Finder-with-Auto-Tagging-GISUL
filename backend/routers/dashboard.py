@@ -55,3 +55,49 @@ async def get_dashboard_analytics(
         "topTags": top_tags,
         "accuracy": "94%"
     }
+
+@router.get('/topic-analysis')
+async def get_topic_analysis(
+    user=Depends(get_current_user),
+    db_service=Depends(get_db)
+):
+    questions_ref = db_service.reference(f'questions/{user.id}')
+    questions_data = questions_ref.get() or {}
+    
+    # Aggregate by topic
+    topics_dict = {}
+    total_q = len(questions_data)
+    
+    # Sort questions by date to get recent ones properly
+    sorted_q = sorted(questions_data.values(), key=lambda x: x.get('createdAt', ''), reverse=True)
+    
+    for qdata in sorted_q:
+        topic = qdata.get('topic', 'Uncategorized')
+        question_text = qdata.get('question', '')
+        
+        if topic not in topics_dict:
+            topics_dict[topic] = {
+                'name': topic,
+                'count': 0,
+                'recentQuestions': []
+            }
+            
+        topics_dict[topic]['count'] += 1
+        # Keep up to 3 recent questions
+        if len(topics_dict[topic]['recentQuestions']) < 3:
+            topics_dict[topic]['recentQuestions'].append(question_text)
+            
+    # Calculate percentages and format list
+    topics_list = []
+    for t_name, t_data in topics_dict.items():
+        t_data['percentage'] = round((t_data['count'] / total_q) * 100, 1) if total_q > 0 else 0
+        topics_list.append(t_data)
+        
+    # Sort by count descending
+    topics_list.sort(key=lambda x: x['count'], reverse=True)
+    
+    return {
+        "totalTopics": len(topics_list),
+        "totalQuestions": total_q,
+        "topics": topics_list
+    }

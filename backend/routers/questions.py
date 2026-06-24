@@ -7,6 +7,7 @@ from models.question import QuestionRequest, SearchResult
 
 import asyncio
 from services.similarity_service import check_duplicate, find_similar
+from services.llm_service import get_llm_service
 
 router = APIRouter()
 
@@ -25,12 +26,14 @@ async def search_similar(
 
     # 2. Check for duplicate
     dup = await check_duplicate(db_service, embedding, user.id, threshold=0.90)
+    is_duplicate = False
+    duplicate_question = None
+    similarity_score = None
+    
     if dup:
-        return SearchResult(
-            isDuplicate=True,
-            duplicateQuestion=dup['question'],
-            similarity=round(dup['score'] * 100, 1)
-        )
+        is_duplicate = True
+        duplicate_question = dup['question']
+        similarity_score = round(dup['score'] * 100, 1)
 
     # 3. Find top 5 similar
     similar = await find_similar(db_service, embedding, user.id, top_k=5)
@@ -39,11 +42,13 @@ async def search_similar(
     topic, confidence = tagger.classify(payload.question, embedder)
     
     # 5. Generate Chatbot Response
-    chat_response = ""
+    llm = get_llm_service()
+    ai_answer = llm.generate_answer(payload.question)
+    
     if similar and len(similar) > 0:
-        chat_response = f"Based on your study history, this question clearly relates to **{topic}**. I found {len(similar)} similar questions you've asked in the past. Reviewing those prior concepts might help you connect the dots here!"
+        chat_response = f"AI Answer: {ai_answer}\n\nNote: I also found {len(similar)} similar questions you've asked in the past about {topic}. Reviewing those prior concepts might help you connect the dots!"
     else:
-        chat_response = f"This looks like a brand new concept for you! I've categorized this under **{topic}**. Let's dive deep into this subject together."
+        chat_response = f"AI Answer: {ai_answer}\n\nThis looks like a brand new concept for you! I've categorized this under {topic}. Let's dive deep into this subject together."
 
     # 6. Persist
     questions_ref = db_service.reference(f'questions/{user.id}')
@@ -58,7 +63,9 @@ async def search_similar(
     })
 
     return SearchResult(
-        isDuplicate=False,
+        isDuplicate=is_duplicate,
+        duplicateQuestion=duplicate_question,
+        similarity=similarity_score,
         topic=topic,
         confidence=confidence,
         similarQuestions=similar,

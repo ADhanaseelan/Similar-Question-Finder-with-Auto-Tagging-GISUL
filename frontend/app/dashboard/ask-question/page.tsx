@@ -42,6 +42,9 @@ export default function AskQuestionPage() {
   ]);
   const [autocompleteResults, setAutocompleteResults] = useState<string[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => { setIsSaved(false); }, [searchResult]);
 
   useEffect(() => {
     // Fetch dynamic random suggestions from the database
@@ -150,6 +153,42 @@ export default function AskQuestionPage() {
       related: [] // We can leave this empty since backend doesn't provide it yet
     }
   } : null;
+
+  const handleSave = async () => {
+    if (!displayData || isSaved) return;
+    try {
+      const token = localStorage.getItem("token");
+      await fetch("/api/questions/saved", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id: `asked_${Date.now()}`,
+          question: query,
+          topic: displayData.analysis.topic
+        })
+      });
+      setIsSaved(true);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCopy = () => {
+    if (displayData?.chatResponse) {
+      navigator.clipboard.writeText(displayData.chatResponse);
+      alert("AI Answer copied to clipboard!");
+    } else {
+      alert("Nothing to copy yet!");
+    }
+  };
+
+  const handleAskAnother = () => {
+    setQuery("");
+    setSearchResult(null);
+  };
 
   return (
     <div className="pb-12 space-y-6">
@@ -356,23 +395,6 @@ export default function AskQuestionPage() {
                   <h3 className="font-bold text-gray-800 text-lg mb-6 flex items-center gap-2">
                     <Activity className="w-5 h-5 text-indigo-500" /> AI Processing Timeline
                   </h3>
-                  {/* <div className="relative pl-4 space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-indigo-500 before:to-gray-100">
-                    {[
-                      { step: "Converting question to vector embedding" },
-                      { step: "Searching indexed question database" },
-                      { step: "Running semantic similarity match" },
-                      { step: `Assigning topic tags (${displayData.analysis.topic})` }
-                    ].map((item: any, idx: number) => (
-                      <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
-                        <div className="flex items-center justify-center w-6 h-6 rounded-full border-4 border-white bg-indigo-500 text-white shadow-sm absolute left-0 md:left-1/2 -translate-x-1/2 z-10">
-                          <CheckCircle2 className="w-3 h-3" />
-                        </div>
-                        <div className="w-[calc(100%-2rem)] md:w-[calc(50%-2rem)] pl-4 md:pl-0 md:group-even:text-right md:group-odd:text-left md:group-even:pr-4 md:group-odd:pl-4">
-                          <h4 className="text-sm font-bold text-gray-800">{item.step}</h4>
-                        </div>
-                      </div>
-                    ))}
-                  </div> */}
                 </div>
               )}
 
@@ -470,30 +492,33 @@ export default function AskQuestionPage() {
             </ul>
           </div>
 
-          {/* RECOMMENDED TOPICS */}
-          {/* <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-indigo-500" /> Recommended
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {recommendedTopics.map((topic, idx) => (
-                <span key={idx} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${topic.color}`}>
-                  {topic.label}
-                </span>
-              ))}
-            </div>
-          </div> */}
-
           {/* QUICK ACTIONS */}
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
             <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
               <Zap className="w-5 h-5 text-indigo-500" /> Quick Actions
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              <ActionButton icon={<Bookmark className="w-4 h-4" />} label="Save" />
-              <ActionButton icon={<Copy className="w-4 h-4" />} label="Copy" />
-              <ActionButton icon={<Share2 className="w-4 h-4" />} label="Share" />
-              <ActionButton icon={<RefreshCw className="w-4 h-4" />} label="Ask Another" />
+              <ActionButton 
+                icon={<Bookmark className="w-4 h-4" />} 
+                label={isSaved ? "Saved!" : "Save"} 
+                onClick={handleSave} 
+                active={isSaved} 
+              />
+              <ActionButton 
+                icon={<Copy className="w-4 h-4" />} 
+                label="Copy" 
+                onClick={handleCopy} 
+              />
+              <ActionButton 
+                icon={<Share2 className="w-4 h-4" />} 
+                label="Share" 
+                onClick={() => alert("Share feature coming soon!")} 
+              />
+              <ActionButton 
+                icon={<RefreshCw className="w-4 h-4" />} 
+                label="Ask Another" 
+                onClick={handleAskAnother} 
+              />
               <button
                 onClick={() => router.push("/dashboard/history")}
                 className="col-span-2 mt-2 w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-sm font-bold border border-gray-200 transition-colors flex items-center justify-center gap-2"
@@ -522,9 +547,16 @@ function AnalysisStat({ title, value, icon }: any) {
   );
 }
 
-function ActionButton({ icon, label }: any) {
+function ActionButton({ icon, label, onClick, active }: any) {
   return (
-    <button className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 text-gray-600 font-semibold text-xs border border-gray-100 transition-all">
+    <button 
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl font-semibold text-xs border transition-all ${
+        active 
+          ? "bg-indigo-50 text-indigo-600 border-indigo-200" 
+          : "bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 text-gray-600 border-gray-100"
+      }`}
+    >
       {icon}
       {label}
     </button>

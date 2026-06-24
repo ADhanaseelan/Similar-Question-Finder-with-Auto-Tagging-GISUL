@@ -1,10 +1,10 @@
-from transformers import pipeline
+from transformers import T5Tokenizer, T5ForConditionalGeneration
 
 class LLMService:
     def __init__(self):
         # We use a very tiny FLAN-T5 model that runs well on CPU.
-        # It's an instruction-following model capable of basic reasoning.
-        self.generator = pipeline("text2text-generation", model="google/flan-t5-small")
+        self.tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small", legacy=False)
+        self.model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-small")
         print("[LLMService] Offline model 'flan-t5-small' loaded successfully.")
 
     def generate_suggestions(self, question: str) -> list[str]:
@@ -14,20 +14,19 @@ class LLMService:
         prompt = f"Generate a highly related follow-up study question for this question: {question}"
         
         try:
-            # Optimize for speed on CPU: no beam search, greedy or fast sampling
-            results = self.generator(
-                prompt,
+            input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
+            outputs = self.model.generate(
+                input_ids,
                 max_new_tokens=30,
-                num_return_sequences=2, # Reduce to 2 for faster generation
-                do_sample=True,         # Fast sampling instead of slow beams
+                num_return_sequences=2,
+                do_sample=True,
                 top_k=50,
                 temperature=0.7
             )
             
             suggestions = set()
-            for res in results:
-                text = res['generated_text'].strip()
-                # Basic cleanup
+            for output in outputs:
+                text = self.tokenizer.decode(output, skip_special_tokens=True).strip()
                 if text and text.endswith("?"):
                     suggestions.add(text)
                 elif text:
@@ -37,6 +36,31 @@ class LLMService:
         except Exception as e:
             print(f"[LLMService] Error generating suggestions: {e}")
             return []
+
+    def generate_answer(self, question: str) -> str:
+        """
+        Generates a direct answer to the user's question using the offline model.
+        """
+        prompt = f"Answer the following question in detail: {question}"
+        
+        try:
+            input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids
+            outputs = self.model.generate(
+                input_ids,
+                max_new_tokens=150,
+                num_return_sequences=1,
+                do_sample=True,
+                top_k=50,
+                temperature=0.7
+            )
+            
+            answer = self.tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+            if not answer:
+                return "I'm sorry, I couldn't think of an answer to that."
+            return answer
+        except Exception as e:
+            print(f"[LLMService] Error generating answer: {e}")
+            return "I'm having trouble thinking of an answer right now."
 
 llm_service_instance = LLMService()
 

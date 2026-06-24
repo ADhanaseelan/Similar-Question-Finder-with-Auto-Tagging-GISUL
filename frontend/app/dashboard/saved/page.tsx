@@ -1,106 +1,122 @@
 "use client";
-import { Bookmark, Clock, Tag, Search, Loader2, Trash2 } from "lucide-react";
+import { Bookmark, BookmarkMinus, Loader2, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function SavedQuestionsPage() {
+  const router = useRouter();
   const [savedQuestions, setSavedQuestions] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchSaved();
-  }, []);
+    const fetchSaved = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return router.push("/login");
 
-  const fetchSaved = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8000/api/questions/saved", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSavedQuestions(data);
+        const res = await fetch("/api/questions/saved", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setSavedQuestions(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+    fetchSaved();
+  }, [router]);
 
-  const handleUnsave = async (id: string) => {
+  const removeBookmark = async (id: string) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8000/api/questions/saved/${id}`, {
+      if (!token) return;
+
+      // Optimistic update
+      setSavedQuestions(prev => prev.filter(q => q.id !== id));
+
+      await fetch(`/api/questions/saved/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
-      if (res.ok) {
-        setSavedQuestions(prev => prev.filter(q => q.id !== id));
-      }
     } catch (err) {
-      console.error(err);
+      console.error("Failed to remove bookmark", err);
     }
   };
 
   return (
-    <div className="pb-12 space-y-8 max-w-5xl mx-auto">
-      <div className="mb-6 md:mb-8 text-center px-4">
-        <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
-          <Bookmark className="w-6 h-6 md:w-8 md:h-8 text-white" />
+    <div className="pb-12 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight flex items-center gap-3">
+            <Bookmark className="w-8 h-8 text-amber-500 fill-current" /> Saved Questions
+          </h1>
+          <p className="text-gray-500 mt-2 font-medium">Your personal collection of bookmarked study questions.</p>
         </div>
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 tracking-tight">Saved Questions</h1>
-        <p className="text-gray-500 mt-2 text-base md:text-lg max-w-2xl mx-auto">
-          Your personal library of bookmarked questions for quick reference.
-        </p>
+        <div className="bg-amber-50 text-amber-600 px-4 py-2 rounded-xl font-bold">
+          {savedQuestions.length} Saved
+        </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+      {loading ? (
+        <div className="flex flex-col items-center py-20">
+          <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+          <p className="text-gray-500 font-bold">Loading your bookmarks...</p>
         </div>
       ) : savedQuestions.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm max-w-2xl mx-auto">
-          <Bookmark className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-800 mb-2">No Saved Questions</h3>
-          <p className="text-gray-500">You haven't bookmarked any questions yet! Explore the global bank to save questions here.</p>
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 text-center">
+          <div className="w-20 h-20 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mb-6">
+            <Bookmark className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">No Saved Questions</h2>
+          <p className="text-gray-500 mb-8 max-w-md">You haven't bookmarked any questions yet! Explore the global bank to save questions here.</p>
+          <Link href="/dashboard/search" className="px-8 py-3 bg-indigo-500 text-white font-bold rounded-xl hover:bg-indigo-600 transition-colors">
+            Explore Global Bank
+          </Link>
         </div>
       ) : (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-          {savedQuestions.map((item, idx) => (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {savedQuestions.map((q, idx) => (
             <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              key={q.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
-              key={item.id} 
-              className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all group flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center relative"
+              className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between group"
             >
-              <div className="flex-1 w-full">
-                <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2 md:mb-3">
-                  <div className="inline-flex items-center gap-1.5 px-2 md:px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider">
-                    <Tag className="w-3 h-3" />
-                    <span className="truncate max-w-[150px]">{item.topic}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] md:text-xs font-medium text-gray-400">
-                    <Clock className="w-3 h-3 md:w-4 md:h-4" />
-                    {new Date(item.savedAt).toLocaleDateString()}
-                  </div>
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-xs font-bold uppercase tracking-wider">
+                    {q.topic}
+                  </span>
+                  <button 
+                    onClick={() => removeBookmark(q.id)}
+                    className="p-2 rounded-xl bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    title="Remove Bookmark"
+                  >
+                    <BookmarkMinus className="w-5 h-5" />
+                  </button>
                 </div>
-                <h3 className="text-base md:text-lg font-bold text-gray-800 group-hover:text-indigo-600 transition-colors pr-10 md:pr-12">
-                  {item.question}
+                <h3 className="font-bold text-gray-800 text-lg leading-snug mb-4 group-hover:text-indigo-600 transition-colors">
+                  {q.question}
                 </h3>
               </div>
               
               <button 
-                onClick={() => handleUnsave(item.id)}
-                className="absolute top-4 right-4 md:top-6 md:right-6 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                title="Remove bookmark"
+                onClick={() => router.push('/dashboard/ask-question')}
+                className="mt-4 w-full py-3 bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 text-gray-600 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
               >
-                <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                Analyze this question <ArrowRight className="w-4 h-4" />
               </button>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
       )}
     </div>
   );
