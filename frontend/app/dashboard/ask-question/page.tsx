@@ -34,7 +34,6 @@ export default function AskQuestionPage() {
   const [error, setError] = useState("");
   const [searchResult, setSearchResult] = useState<any>(null);
   
-  const { statistics, recentSearches, recommendedTopics } = askQuestionData;
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([
     "What is Artificial Intelligence and Machine Learning?",
     "Explain how the virtual DOM works in React",
@@ -43,7 +42,8 @@ export default function AskQuestionPage() {
   const [autocompleteResults, setAutocompleteResults] = useState<string[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [stats, setStats] = useState({ today: 0, total: 0, favorite: "N/A", avgSimilarity: 88 });
   useEffect(() => { setIsSaved(false); }, [searchResult]);
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function AskQuestionPage() {
         const token = localStorage.getItem("token");
         if (!token) return;
         
-        const res = await fetch("http://localhost:8000/api/questions/suggestions", {
+        const res = await fetch("/api/questions/suggestions", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         
@@ -68,7 +68,57 @@ export default function AskQuestionPage() {
       }
     };
     
+    // Fetch history for stats
+    const fetchHistory = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        
+        const res = await fetch("/api/questions/history", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setRecentSearches(data.slice(0, 5).map((d: any) => d.question));
+            
+            // Calculate stats
+            const today = new Date().toISOString().split('T')[0];
+            let todayCount = 0;
+            const topics: Record<string, number> = {};
+            
+            data.forEach((d: any) => {
+              if (d.createdAt && d.createdAt.startsWith(today)) {
+                todayCount++;
+              }
+              topics[d.topic] = (topics[d.topic] || 0) + 1;
+            });
+            
+            let topTopic = "N/A";
+            let maxCount = 0;
+            Object.entries(topics).forEach(([topic, count]) => {
+              if (count > maxCount) {
+                maxCount = count;
+                topTopic = topic;
+              }
+            });
+            
+            setStats({
+              today: todayCount,
+              total: data.length,
+              favorite: topTopic,
+              avgSimilarity: 92 // Mocked for now until we store sim scores
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch history for stats", err);
+      }
+    };
+    
     fetchSuggestions();
+    fetchHistory();
   }, []);
 
   useEffect(() => {
@@ -460,19 +510,19 @@ export default function AskQuestionPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center border-b border-gray-50 pb-3">
                 <span className="text-sm font-medium text-gray-500">Questions Today</span>
-                <span className="text-lg font-bold text-gray-800">{statistics.today}</span>
+                <span className="text-lg font-bold text-gray-800">{stats.today}</span>
               </div>
               <div className="flex justify-between items-center border-b border-gray-50 pb-3">
                 <span className="text-sm font-medium text-gray-500">Total Questions</span>
-                <span className="text-lg font-bold text-gray-800">{statistics.total}</span>
+                <span className="text-lg font-bold text-gray-800">{stats.total}</span>
               </div>
               <div className="flex justify-between items-center border-b border-gray-50 pb-3">
                 <span className="text-sm font-medium text-gray-500">Favorite Topic</span>
-                <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">{statistics.favorite}</span>
+                <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">{stats.favorite}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-gray-500">Avg Similarity</span>
-                <span className="text-lg font-bold text-green-500">{statistics.avgSimilarity}%</span>
+                <span className="text-lg font-bold text-green-500">{stats.avgSimilarity}%</span>
               </div>
             </div>
           </div>
