@@ -121,3 +121,141 @@ async def autocomplete(
                                 return list(matches)
                                 
     return list(matches)
+
+@router.get('/global-bank')
+async def get_global_bank(
+    db_service=Depends(get_db)
+):
+    """Returns all questions from the global Kaggle seed for the explorer."""
+    ref = db_service.reference('questions/kaggle_seed')
+    data = ref.get()
+    
+    results = []
+    if data:
+        for qid, qdata in data.items():
+            results.append({
+                'id': qid,
+                'question': qdata.get('question', ''),
+                'topic': qdata.get('topic', 'Unknown'),
+                'confidence': qdata.get('confidence', 0.0),
+                'timestamp': qdata.get('timestamp', 0)
+            })
+            
+    # Sort by timestamp descending
+    results.sort(key=lambda x: x['timestamp'], reverse=True)
+    return results
+
+@router.get('/history')
+async def get_history(
+    user=Depends(get_current_user),
+    db_service=Depends(get_db)
+):
+    """Returns the history of questions asked by the current user."""
+    ref = db_service.reference(f'questions/{user.id}')
+    data = ref.get()
+    
+    results = []
+    if data:
+        for qid, qdata in data.items():
+            results.append({
+                'id': qid,
+                'question': qdata.get('question', ''),
+                'topic': qdata.get('topic', 'Unknown'),
+                'createdAt': qdata.get('createdAt', ''),
+                'similarCount': len(qdata.get('similarQuestions', [])) if qdata.get('similarQuestions') else 0
+            })
+            
+    # Sort by creation date descending
+    results.sort(key=lambda x: x['createdAt'], reverse=True)
+    return results
+
+from pydantic import BaseModel
+
+class SaveQuestionRequest(BaseModel):
+    id: str
+    question: str
+    topic: str
+    
+@router.post('/saved')
+async def save_question(
+    payload: SaveQuestionRequest,
+    user=Depends(get_current_user),
+    db_service=Depends(get_db)
+):
+    """Saves a question to the user's bookmarks."""
+    ref = db_service.reference(f'saved_questions/{user.id}/{payload.id}')
+    ref.set({
+        'id': payload.id,
+        'question': payload.question,
+        'topic': payload.topic,
+        'savedAt': datetime.utcnow().isoformat()
+    })
+    return {"success": True}
+
+@router.delete('/saved/{question_id}')
+async def unsave_question(
+    question_id: str,
+    user=Depends(get_current_user),
+    db_service=Depends(get_db)
+):
+    """Removes a question from the user's bookmarks."""
+    ref = db_service.reference(f'saved_questions/{user.id}/{question_id}')
+    ref.delete()
+    return {"success": True}
+
+@router.get('/saved')
+async def get_saved_questions(
+    user=Depends(get_current_user),
+    db_service=Depends(get_db)
+):
+    """Returns the user's saved/bookmarked questions."""
+    ref = db_service.reference(f'saved_questions/{user.id}')
+    data = ref.get()
+    
+    results = []
+    if data:
+        for qid, qdata in data.items():
+            results.append(qdata)
+            
+    results.sort(key=lambda x: x.get('savedAt', ''), reverse=True)
+    return results
+
+@router.get('/activity')
+async def get_recent_activity(
+    user=Depends(get_current_user),
+    db_service=Depends(get_db)
+):
+    """Returns a unified timeline of recent user activity (asked & saved questions)."""
+    activity_feed = []
+    
+    # 1. Get asked questions
+    asked_ref = db_service.reference(f'questions/{user.id}')
+    asked_data = asked_ref.get()
+    if asked_data:
+        for qid, qdata in asked_data.items():
+            activity_feed.append({
+                'id': qid,
+                'type': 'asked',
+                'question': qdata.get('question', ''),
+                'topic': qdata.get('topic', 'Unknown'),
+                'timestamp': qdata.get('createdAt', '')
+            })
+            
+    # 2. Get saved questions
+    saved_ref = db_service.reference(f'saved_questions/{user.id}')
+    saved_data = saved_ref.get()
+    if saved_data:
+        for qid, qdata in saved_data.items():
+            activity_feed.append({
+                'id': f"saved_{qid}",
+                'type': 'saved',
+                'question': qdata.get('question', ''),
+                'topic': qdata.get('topic', 'Unknown'),
+                'timestamp': qdata.get('savedAt', '')
+            })
+            
+    # Sort unified feed by timestamp descending
+    activity_feed.sort(key=lambda x: x['timestamp'], reverse=True)
+    
+    # Return top 20 recent activities
+    return activity_feed[:20]

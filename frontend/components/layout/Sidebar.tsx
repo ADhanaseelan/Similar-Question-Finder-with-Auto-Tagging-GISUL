@@ -18,10 +18,11 @@ import {
   Settings, 
   User, 
   LogOut, 
-  Network 
+  Network,
+  X
 } from "lucide-react";
 
-export function Sidebar() {
+export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (val: boolean) => void }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -47,47 +48,66 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 h-screen bg-background-light dark:bg-background-dark border-r border-border-light dark:border-border-dark flex flex-col fixed left-0 top-0">
-      <div className="p-6">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center">
-            <Network className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-poppins font-bold text-foreground-light dark:text-foreground-dark">
-            LearnConnect
-          </span>
-        </Link>
-      </div>
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
 
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                isActive
-                  ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
-                  : "text-gray-500 hover:text-foreground-light dark:text-gray-400 dark:hover:text-foreground-dark hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.name}
-            </Link>
-          );
-        })}
-      </nav>
+      <aside className={`w-64 h-screen bg-background-light dark:bg-background-dark border-r border-border-light dark:border-border-dark flex flex-col fixed left-0 top-0 z-50 transition-transform duration-300 ease-in-out ${
+        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      }`}>
+        <div className="p-6 flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-3" onClick={() => setIsOpen(false)}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center">
+              <Network className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-poppins font-bold text-foreground-light dark:text-foreground-dark">
+              LearnConnect
+            </span>
+          </Link>
+          <button 
+            className="md:hidden p-2 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-lg"
+            onClick={() => setIsOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-      <div className="p-4 border-t border-border-light dark:border-border-dark">
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 w-full transition-colors"
-        >
-          <LogOut className="w-5 h-5" />
-          Logout
-        </button>
-      </div>
-    </aside>
+        <nav className="flex-1 px-4 space-y-1 overflow-y-auto pb-4">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname?.startsWith(item.href));
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setIsOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                  isActive
+                    ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
+                    : "text-gray-500 hover:text-foreground-light dark:text-gray-400 dark:hover:text-foreground-dark hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-border-light dark:border-border-dark shrink-0">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 w-full transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            Logout
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

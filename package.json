@@ -1,0 +1,8 @@
+{
+  "name": "auto-tagging-root",
+  "version": "1.0.0",
+  "description": "Root package for starting the full stack application",
+  "scripts": {
+    "dev": "npx concurrently -c \"blue,green\" -n \"backend,frontend\" \"cd backend && python main.py\" \"cd frontend && npm run dev\""
+  }
+}
