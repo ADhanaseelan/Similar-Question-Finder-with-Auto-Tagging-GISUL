@@ -87,12 +87,18 @@ export default function AskQuestionPage() {
             const today = new Date().toISOString().split('T')[0];
             let todayCount = 0;
             const topics: Record<string, number> = {};
+            let totalSimilarity = 0;
+            let simCount = 0;
             
             data.forEach((d: any) => {
               if (d.createdAt && d.createdAt.startsWith(today)) {
                 todayCount++;
               }
               topics[d.topic] = (topics[d.topic] || 0) + 1;
+              if (d.maxSimilarity > 0) {
+                totalSimilarity += d.maxSimilarity;
+                simCount++;
+              }
             });
             
             let topTopic = "N/A";
@@ -104,11 +110,13 @@ export default function AskQuestionPage() {
               }
             });
             
+            const avgSim = simCount > 0 ? Math.round(totalSimilarity / simCount) : 0;
+            
             setStats({
               today: todayCount,
               total: data.length,
               favorite: topTopic,
-              avgSimilarity: 92 // Mocked for now until we store sim scores
+              avgSimilarity: avgSim
             });
           }
         }
@@ -215,7 +223,7 @@ export default function AskQuestionPage() {
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          id: `asked_${Date.now()}`,
+          id: searchResult?.questionId || `asked_${Date.now()}`,
           question: query,
           topic: displayData.analysis.topic
         })
@@ -223,6 +231,31 @@ export default function AskQuestionPage() {
       setIsSaved(true);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleTopicOverride = async (newTopic: string, newConfidence: number) => {
+    if (!searchResult || !searchResult.questionId) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:8000/api/questions/${searchResult.questionId}/topic`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ topic: newTopic, confidence: newConfidence })
+      });
+      if (res.ok) {
+        // Update local state to reflect the change
+        setSearchResult({
+          ...searchResult,
+          topic: newTopic,
+          confidence: newConfidence
+        });
+      }
+    } catch (err) {
+      console.error("Failed to override topic:", err);
     }
   };
 
@@ -437,6 +470,31 @@ export default function AskQuestionPage() {
                     <AnalysisStat title="Processing Time" value={displayData.analysis.processingTime} icon={<Clock className="w-4 h-4 text-orange-500" />} />
                     <AnalysisStat title="Question Complexity" value={displayData.analysis.complexity} icon={<Zap className="w-4 h-4 text-yellow-500" />} />
                   </div>
+
+                  {/* ALTERNATIVE TAG SUGGESTIONS */}
+                  {searchResult?.alternativeTopics && searchResult.alternativeTopics.length > 0 && (
+                    <div className="mt-6 border-t border-gray-100 pt-5">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Alternative Tag Suggestions</p>
+                      <div className="flex flex-wrap gap-2">
+                        {searchResult.alternativeTopics.map((alt: any, idx: number) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleTopicOverride(alt.topic, alt.confidence)}
+                            className="px-3 py-1.5 bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 text-gray-500 rounded-lg text-sm font-medium border border-gray-100 transition-all flex items-center gap-2 group"
+                            title="Click to override primary topic"
+                          >
+                            {alt.topic}
+                            <span className="text-xs text-gray-400 group-hover:text-indigo-400 font-bold bg-white px-1.5 py-0.5 rounded-md border border-gray-100">
+                              {Math.round(alt.confidence * 100)}%
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2 italic flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> Click any suggestion to manually override the AI's primary tag.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
               {/* AI PROCESSING TIMELINE */}

@@ -5,6 +5,10 @@ from datetime import datetime
 class QuestionRequest(BaseModel):
     question: str
 
+class UpdateTopicRequest(BaseModel):
+    topic: str
+    confidence: float
+
 class SimilarQuestion(BaseModel):
     question: str
     topic: str
@@ -16,8 +20,10 @@ class SearchResult(BaseModel):
     similarity: Optional[float] = None
     topic: Optional[str] = None
     confidence: Optional[float] = None
+    alternativeTopics: Optional[List[dict]] = None
     similarQuestions: Optional[List[SimilarQuestion]] = None
     chatResponse: Optional[str] = None
+    questionId: Optional[str] = None
 
 class HistoryItem(BaseModel):
     id: str

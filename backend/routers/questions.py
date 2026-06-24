@@ -39,7 +39,7 @@ async def search_similar(
     similar = await find_similar(db_service, embedding, user.id, top_k=5)
 
     # 4. Classify topic
-    topic, confidence = tagger.classify(payload.question, embedder)
+    topic, confidence, alternatives = tagger.classify(payload.question, embedder)
     
     # 5. Generate Chatbot Response
     llm = get_llm_service()
@@ -52,7 +52,7 @@ async def search_similar(
 
     # 6. Persist
     questions_ref = db_service.reference(f'questions/{user.id}')
-    questions_ref.push({
+    new_ref = questions_ref.push({
         'userId': user.id,
         'question': payload.question,
         'embedding': embedding,
@@ -68,9 +68,31 @@ async def search_similar(
         similarity=similarity_score,
         topic=topic,
         confidence=confidence,
+        alternativeTopics=alternatives,
         similarQuestions=similar,
-        chatResponse=chat_response
+        chatResponse=chat_response,
+        questionId=new_ref.key
     )
+
+from models.question import UpdateTopicRequest
+
+@router.put('/{question_id}/topic')
+async def update_question_topic(
+    question_id: str,
+    payload: UpdateTopicRequest,
+    user=Depends(get_current_user),
+    db_service=Depends(get_db)
+):
+    """Allows user to override the AI's auto-tag with an alternative suggestion."""
+    ref = db_service.reference(f'questions/{user.id}/{question_id}')
+    data = ref.get()
+    if data:
+        ref.update({
+            'topic': payload.topic,
+            'confidence': payload.confidence
+        })
+        return {"success": True, "message": "Topic updated successfully."}
+    return {"success": False, "message": "Question not found."}
 
 import random
 
@@ -164,12 +186,18 @@ async def get_history(
     results = []
     if data:
         for qid, qdata in data.items():
+            sims = qdata.get('similarQuestions', [])
+            max_sim = 0
+            if sims:
+                max_sim = max([s.get('similarity', 0) for s in sims])
+                
             results.append({
                 'id': qid,
                 'question': qdata.get('question', ''),
                 'topic': qdata.get('topic', 'Unknown'),
                 'createdAt': qdata.get('createdAt', ''),
-                'similarCount': len(qdata.get('similarQuestions', [])) if qdata.get('similarQuestions') else 0
+                'similarCount': len(sims),
+                'maxSimilarity': max_sim
             })
             
     # Sort by creation date descending

@@ -1,5 +1,5 @@
 "use client";
-import { Settings, User, Bell, Shield, Moon, Monitor, Palette, Save, LogOut } from "lucide-react";
+import { Settings, User, Bell, Shield, Moon, Monitor, Palette, Save, LogOut, Target } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -9,10 +9,30 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
   const [userName, setUserName] = useState("Loading...");
 
+  const [taxonomy, setTaxonomy] = useState<string[]>([]);
+
   useEffect(() => {
     // Mock user details fetch
     const email = localStorage.getItem("userEmail") || "user@example.com";
     setUserName(email.split('@')[0]);
+
+    // Fetch taxonomy
+    const fetchTaxonomy = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        const res = await fetch("http://localhost:8000/api/dashboard/taxonomy", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTaxonomy(data);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchTaxonomy();
   }, []);
 
   const handleLogout = () => {
@@ -59,6 +79,12 @@ export default function SettingsPage() {
             onClick={() => setActiveTab("security")} 
             icon={<Shield className="w-5 h-5" />} 
             label="Security" 
+          />
+          <TabButton 
+            active={activeTab === "taxonomy"} 
+            onClick={() => setActiveTab("taxonomy")} 
+            icon={<Target className="w-5 h-5" />} 
+            label="Taxonomy Management" 
           />
           
           <div className="pt-6 mt-6 border-t border-gray-100">
@@ -151,6 +177,24 @@ export default function SettingsPage() {
                       Update Password
                     </button>
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === "taxonomy" && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                <h2 className="text-xl font-bold text-gray-800 mb-2">Taxonomy Management</h2>
+                <p className="text-gray-500 font-medium mb-6">View the list of valid topic tags currently mapped in the AI model's training data.</p>
+                <div className="flex flex-wrap gap-2">
+                  {taxonomy.length > 0 ? taxonomy.map((topic, i) => (
+                    <div key={i} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors rounded-lg text-sm font-bold border border-indigo-100">
+                      {topic}
+                    </div>
+                  )) : (
+                    <p className="text-gray-400 font-medium">Loading taxonomy...</p>
+                  )}
                 </div>
               </div>
             </motion.div>

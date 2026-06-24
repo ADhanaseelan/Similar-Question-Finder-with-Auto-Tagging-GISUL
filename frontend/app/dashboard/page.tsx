@@ -1,19 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   ArrowRight, 
   MessageSquare, 
   BookOpen, 
   Bookmark, 
-  TrendingUp, 
-  Sparkles,
   Leaf,
   Activity,
-  PieChart,
-  HelpCircle,
   Loader2,
-  Brain
+  Brain,
+  Zap
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -65,6 +62,7 @@ export default function DashboardPage() {
   const stats = analytics || { totalQuestions: 0, topicsExplored: 0, accuracy: "N/A" };
   const topics = topicAnalysis?.topics || [];
   const topTopic = topics.length > 0 ? topics[0] : null;
+  const dailyActivity = analytics?.dailyActivity || [];
 
   // Colors for the donut chart
   const colors = [
@@ -76,101 +74,78 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Hero Banner */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 rounded-3xl p-10 overflow-hidden text-white shadow-xl shadow-purple-500/20"
-      >
-        <div className="relative z-10 max-w-xl">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight leading-tight">
-            Ask Smarter.<br />Learn Better.
-          </h1>
-          <p className="text-lg text-white/80 mb-8 max-w-md">
-            Get AI-powered answers, similar questions and topic insights instantly.
-          </p>
-          <button 
-            onClick={() => router.push("/dashboard/ask-question")}
-            className="bg-white text-indigo-600 px-8 py-3.5 rounded-full font-bold flex items-center gap-2 hover:scale-105 hover:shadow-lg transition-all"
-          >
-            Ask a Question Now <ArrowRight className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="space-y-6 pb-12">
+      
+      {/* Top Row: Hero Banner & Advanced Daily Activity Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Abstract 3D-like shapes for hero */}
-        <div className="absolute right-10 top-1/2 -translate-y-1/2 hidden lg:block">
-          <div className="relative w-64 h-64">
-             <div className="absolute top-0 left-10 w-24 h-24 bg-yellow-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-             <div className="absolute top-0 right-10 w-24 h-24 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-             <div className="absolute -bottom-8 left-20 w-24 h-24 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-             <div className="absolute inset-0 flex items-center justify-center text-8xl">
+        {/* HERO BANNER (Reduced Size) */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="lg:col-span-2 relative bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 rounded-3xl p-8 overflow-hidden text-white shadow-xl shadow-purple-500/20 flex items-center justify-between"
+        >
+          <div className="relative z-10 max-w-sm">
+            <h1 className="text-3xl md:text-4xl font-extrabold mb-3 tracking-tight leading-tight">
+              Ask Smarter.<br />Learn Better.
+            </h1>
+            <p className="text-sm text-white/80 mb-6">
+              Get AI-powered answers, similar questions and topic insights instantly.
+            </p>
+            <button 
+              onClick={() => router.push("/dashboard/ask-question")}
+              className="bg-white text-indigo-600 px-6 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 hover:scale-105 hover:shadow-lg transition-all"
+            >
+              Ask a Question Now <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+          
+          {/* Abstract 3D-like shapes for hero (Reduced size) */}
+          <div className="relative w-32 h-32 hidden md:block shrink-0 mr-4">
+             <div className="absolute top-0 left-0 w-16 h-16 bg-yellow-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+             <div className="absolute top-0 right-0 w-16 h-16 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+             <div className="absolute -bottom-4 left-8 w-16 h-16 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+             <div className="absolute inset-0 flex items-center justify-center text-6xl drop-shadow-xl">
                 🧠
              </div>
           </div>
+        </motion.div>
+
+        {/* ADVANCED MODEL DAILY PULSE (Unique Format) */}
+        <div className="bg-gray-900 rounded-3xl p-6 shadow-xl border border-gray-800 relative overflow-hidden flex flex-col justify-between group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full filter blur-3xl group-hover:bg-indigo-500/30 transition-colors"></div>
+          
+          <div className="flex justify-between items-start z-10 mb-4">
+            <div>
+              <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                <Zap className="w-5 h-5 text-indigo-400" /> Model Pulse
+              </h3>
+              <p className="text-xs text-gray-400 mt-1 uppercase tracking-wider font-bold">7-Day Analysis Velocity</p>
+            </div>
+            <div className="px-2 py-1 bg-indigo-500/20 rounded-md border border-indigo-500/30">
+              <span className="text-xs font-bold text-indigo-300">Active</span>
+            </div>
+          </div>
+
+          <div className="h-32 w-full mt-auto relative z-10">
+            <AdvancedSparkline data={dailyActivity} />
+          </div>
         </div>
-      </motion.div>
+
+      </div>
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          title="Total Questions" 
-          value={stats.totalQuestions} 
-          icon={<MessageSquare className="w-6 h-6 text-indigo-500" />} 
-          color="bg-indigo-50" 
-        />
-        <StatCard 
-          title="Topics Explored" 
-          value={stats.topicsExplored} 
-          icon={<BookOpen className="w-6 h-6 text-emerald-500" />} 
-          color="bg-emerald-50" 
-        />
-        <StatCard 
-          title="Recent Activity" 
-          value={recentActivity.length} 
-          icon={<Activity className="w-6 h-6 text-purple-500" />} 
-          color="bg-purple-50" 
-        />
-        <StatCard 
-          title="AI Confidence" 
-          value={stats.accuracy} 
-          icon={<Brain className="w-6 h-6 text-rose-500" />} 
-          color="bg-rose-50" 
-        />
+        <StatCard title="Total Questions" value={stats.totalQuestions} icon={<MessageSquare className="w-6 h-6 text-indigo-500" />} color="bg-indigo-50" />
+        <StatCard title="Topics Explored" value={stats.topicsExplored} icon={<BookOpen className="w-6 h-6 text-emerald-500" />} color="bg-emerald-50" />
+        <StatCard title="Recent Activity" value={recentActivity.length} icon={<Activity className="w-6 h-6 text-purple-500" />} color="bg-purple-50" />
+        <StatCard title="AI Confidence" value={stats.accuracy} icon={<Brain className="w-6 h-6 text-rose-500" />} color="bg-rose-50" />
       </div>
 
+      {/* Bottom Row: Swapped Order (Chart on Left, Activity on Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Recent Activity Feed */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col lg:col-span-2">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-gray-800 text-lg">Recent Activity</h3>
-            <Link href="/dashboard/history" className="text-indigo-500 text-sm font-semibold hover:underline">View all</Link>
-          </div>
-          <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            {recentActivity.length === 0 ? (
-              <p className="text-gray-500 italic">No recent activity.</p>
-            ) : (
-              recentActivity.slice(0, 5).map((act, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${act.type === 'saved' ? 'bg-amber-100 text-amber-500' : 'bg-indigo-100 text-indigo-500'}`}>
-                    {act.type === 'saved' ? <Bookmark className="w-5 h-5" /> : <MessageSquare className="w-5 h-5" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-800 truncate mb-1">{act.question}</p>
-                    <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-                      <span className="text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md">{act.topic}</span>
-                      <span>•</span>
-                      <span>{new Date(act.timestamp).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Topic Distribution */}
+        {/* Topic Distribution (Now on LEFT - col-span-1) */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-gray-800 text-lg">Topic Distribution</h3>
@@ -215,6 +190,35 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Recent Activity Feed (Now on RIGHT - col-span-2) */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col lg:col-span-2">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="font-bold text-gray-800 text-lg">Recent Activity</h3>
+            <Link href="/dashboard/history" className="text-indigo-500 text-sm font-semibold hover:underline">View all</Link>
+          </div>
+          <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            {recentActivity.length === 0 ? (
+              <p className="text-gray-500 italic">No recent activity.</p>
+            ) : (
+              recentActivity.slice(0, 5).map((act, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${act.type === 'saved' ? 'bg-amber-100 text-amber-500' : 'bg-indigo-100 text-indigo-500'}`}>
+                    {act.type === 'saved' ? <Bookmark className="w-5 h-5" /> : <MessageSquare className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-800 truncate mb-1">{act.question}</p>
+                    <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+                      <span className="text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md">{act.topic}</span>
+                      <span>•</span>
+                      <span>{new Date(act.timestamp).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );
@@ -231,6 +235,98 @@ function StatCard({ title, value, icon, color }: any) {
       <div>
         <p className="text-sm font-semibold text-gray-500 mb-1">{title}</p>
         <p className="text-2xl font-bold text-gray-800">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function AdvancedSparkline({ data }: { data: any[] }) {
+  if (!data || data.length === 0) {
+    return <div className="text-gray-600 text-sm flex items-center justify-center h-full">No pulse data</div>;
+  }
+
+  const w = 400;
+  const h = 100;
+  const maxVal = Math.max(...data.map(d => d.count), 1);
+
+  // Build the smooth cubic bezier curve path
+  let path = `M 0,${h - (data[0].count / maxVal) * h}`;
+  for (let i = 1; i < data.length; i++) {
+    const prevX = ((i - 1) / (data.length - 1)) * w;
+    const prevY = h - (data[i - 1].count / maxVal) * h;
+    const currX = (i / (data.length - 1)) * w;
+    const currY = h - (data[i].count / maxVal) * h;
+    const controlX1 = prevX + (currX - prevX) / 2;
+    const controlY1 = prevY;
+    const controlX2 = prevX + (currX - prevX) / 2;
+    const controlY2 = currY;
+    path += ` C ${controlX1},${controlY1} ${controlX2},${controlY2} ${currX},${currY}`;
+  }
+
+  // Create the fill polygon by closing the path to the bottom edge
+  const fillPath = `${path} L ${w},${h} L 0,${h} Z`;
+
+  return (
+    <div className="relative w-full h-full flex flex-col">
+      <svg viewBox={`0 -10 ${w} ${h + 20}`} preserveAspectRatio="none" className="w-full h-full overflow-visible">
+        <defs>
+          <linearGradient id="sparkGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#818cf8" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#818cf8" stopOpacity="0.0" />
+          </linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+        
+        {/* The shaded area below the line */}
+        <motion.path 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.5 }}
+          d={fillPath} 
+          fill="url(#sparkGradient)" 
+        />
+        
+        {/* The glowing stroke line */}
+        <motion.path 
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 1.5, ease: "easeInOut" }}
+          d={path} 
+          fill="none" 
+          stroke="#818cf8" 
+          strokeWidth="3" 
+          filter="url(#glow)"
+        />
+
+        {/* Data points */}
+        {data.map((d, i) => {
+          const cx = (i / (data.length - 1)) * w;
+          const cy = h - (d.count / maxVal) * h;
+          return (
+            <motion.circle 
+              key={i}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 1 + i * 0.1 }}
+              cx={cx} 
+              cy={cy} 
+              r="4" 
+              fill="#c7d2fe" 
+              stroke="#312e81"
+              strokeWidth="2"
+            />
+          );
+        })}
+      </svg>
+      
+      {/* X-axis labels */}
+      <div className="absolute -bottom-2 left-0 right-0 flex justify-between px-1">
+        {data.map((d, i) => (
+          <span key={i} className="text-[10px] font-bold text-gray-500 uppercase">{d.date}</span>
+        ))}
       </div>
     </div>
   );

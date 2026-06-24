@@ -1,9 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from database import get_db
 from dependencies import get_current_user
 from typing import Dict, Any
 
 router = APIRouter()
+
+@router.get('/taxonomy')
+async def get_taxonomy(request: Request):
+    """Returns the list of all available topics from the tagger."""
+    tagger = request.app.state.tagger
+    return tagger._labels
 
 @router.get('/analytics', response_model=Dict[str, Any])
 async def get_dashboard_analytics(
@@ -47,12 +53,34 @@ async def get_dashboard_analytics(
     all_items.sort(key=lambda x: x.get('createdAt', ''), reverse=True)
     recent_activity_count = len(all_items[:12]) # Just a stat
     
+    # Daily Activity (Last 7 Days)
+    import datetime as dt
+    daily_activity = []
+    today = dt.datetime.utcnow().date()
+    days = [(today - dt.timedelta(days=i)) for i in range(6, -1, -1)]
+    
+    counts_by_date = {}
+    for item in all_items:
+        date_str = item.get('createdAt', '')
+        if date_str and len(date_str) >= 10:
+            d = date_str[:10]
+            counts_by_date[d] = counts_by_date.get(d, 0) + 1
+            
+    for d in days:
+        date_str = d.strftime('%Y-%m-%d')
+        day_label = d.strftime('%a')
+        daily_activity.append({
+            "date": day_label,
+            "count": counts_by_date.get(date_str, 0)
+        })
+    
     return {
         "totalQuestions": total_questions,
         "totalNotes": total_notes,
         "topicsExplored": unique_topics,
         "recentActivityCount": recent_activity_count,
         "topTags": top_tags,
+        "dailyActivity": daily_activity,
         "accuracy": "94%"
     }
 

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 import bcrypt
 from datetime import datetime, timedelta
 from jose import jwt
+from pydantic import BaseModel
 
 from config import settings
 from database import get_db
@@ -50,5 +51,33 @@ async def login(payload: UserCreate, db_service=Depends(get_db)):
     if not verify_password(payload.password, user_data['password']):
         raise HTTPException(status_code=401, detail='Invalid credentials')
         
+    token = create_access_token({'sub': user_id})
+    return {'access_token': token, 'token_type': 'bearer'}
+
+class GoogleUser(BaseModel):
+    email: str
+    uid: str
+    displayName: str = ""
+
+@router.post('/google', response_model=Token)
+async def google_login(payload: GoogleUser, db_service=Depends(get_db)):
+    """Handles Google Auth by mapping the Firebase UID to our custom JWT."""
+    users_ref = db_service.reference('users')
+    query = users_ref.order_by_child('email').equal_to(payload.email).get()
+    
+    if query:
+        # User exists
+        user_id, user_data = next(iter(query.items()))
+    else:
+        # Create new user
+        new_user_ref = users_ref.push({
+            'email': payload.email,
+            'firebaseUid': payload.uid,
+            'displayName': payload.displayName,
+            'createdAt': datetime.utcnow().isoformat(),
+            'authProvider': 'google'
+        })
+        user_id = new_user_ref.key
+
     token = create_access_token({'sub': user_id})
     return {'access_token': token, 'token_type': 'bearer'}

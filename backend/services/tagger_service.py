@@ -51,14 +51,27 @@ class TopicTagger:
             embedder.encode(text) for text in TOPIC_SEEDS.values()
         ])
 
-    def classify(self, question: str, embedder: EmbeddingService) -> tuple[str, float]:
+    def classify(self, question: str, embedder: EmbeddingService) -> tuple[str, float, list[dict]]:
         q_vec = embedder.encode(question)
         # Cosine similarity (dot product of normalized vectors)
         scores = self._topic_vecs @ q_vec
-        best_idx = int(np.argmax(scores))
-        topic = self._labels[best_idx]
         
         # Softmax-like confidence distribution to make it look realistic
         exp_scores = np.exp(scores * 5)
-        confidence = float(exp_scores[best_idx] / exp_scores.sum())
-        return topic, confidence
+        probabilities = exp_scores / exp_scores.sum()
+        
+        # Get top 5 indices
+        top_indices = np.argsort(probabilities)[::-1][:5]
+        
+        best_idx = int(top_indices[0])
+        topic = self._labels[best_idx]
+        confidence = float(probabilities[best_idx])
+        
+        alternatives = []
+        for idx in top_indices[1:]:
+            alternatives.append({
+                "topic": self._labels[int(idx)],
+                "confidence": float(probabilities[idx])
+            })
+            
+        return topic, confidence, alternatives
