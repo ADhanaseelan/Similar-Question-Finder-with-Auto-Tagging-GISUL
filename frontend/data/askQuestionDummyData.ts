@@ -1,12 +1,8 @@
 export const askQuestionData = {
   suggestedQuestions: [
-    "Photosynthesis",
-    "Gravity",
-    "Algebra",
-    "DNA",
-    "Machine Learning",
-    "Chemical Reactions",
-    "Electric Circuits"
+    "What is Artificial Intelligence and Machine Learning?",
+    "Explain how the virtual DOM works in React",
+    "What is the time complexity of sorting algorithms?"
   ],
   analysis: {
     topic: "Biology",

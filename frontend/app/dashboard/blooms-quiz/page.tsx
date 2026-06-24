@@ -1,207 +1,151 @@
 "use client";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Type, FileText, Link as LinkIcon, Upload, Loader2, Sparkles, Brain } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { GlassCard } from "@/components/ui/GlassCard";
 
-const BLOOMS_LEVELS = [
-  "All Blooms Levels",
-  "Remember",
-  "Understand",
-  "Apply",
-  "Analyze",
-  "Evaluate",
-  "Create"
-];
+import { motion } from "framer-motion";
+import { Brain, Database, Code, ChevronRight, Play, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { bloomsQuizData } from "../../../data/bloomsQuizData";
 
 export default function BloomsQuizPage() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"text" | "file" | "url">("text");
-  const [bloomsLevel, setBloomsLevel] = useState("All Blooms Levels");
-  const [inputText, setInputText] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [quizStarted, setQuizStarted] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState(1);
 
-  const handleGenerate = async () => {
-    if (activeTab === "text" && !inputText.trim()) return;
-    
-    setLoading(true);
-
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
-      const res = await fetch("http://localhost:8000/api/quiz/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          source_type: activeTab,
-          content: inputText,
-          blooms_level: bloomsLevel
-        })
-      });
-
-      if (!res.ok) {
-        let errorDetails = "Unknown error";
-        try {
-          const errData = await res.json();
-          errorDetails = JSON.stringify(errData);
-        } catch (e) {
-          errorDetails = res.statusText;
-        }
-        throw new Error(`Failed to generate quiz: ${res.status} - ${errorDetails}`);
-      }
-
-      const data = await res.json();
-      sessionStorage.setItem("last_quiz_result", JSON.stringify(data));
-      router.push("/dashboard/blooms-quiz/results");
-      
-    } catch (err) {
-      console.error(err);
-      alert("An error occurred while generating the quiz.");
-      setLoading(false);
+  const renderIcon = (iconName: string) => {
+    switch(iconName) {
+      case "Brain": return <Brain className="w-6 h-6" />;
+      case "Code": return <Code className="w-6 h-6" />;
+      case "Database": return <Database className="w-6 h-6" />;
+      default: return <Brain className="w-6 h-6" />;
     }
   };
 
+  const currentQuestion = bloomsQuizData.sampleQuiz.find(q => q.level === currentLevel);
+
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl space-y-8"
-    >
-      <div>
-        <h1 className="text-4xl font-poppins font-extrabold text-foreground-light dark:text-foreground-dark mb-2 flex items-center gap-3">
-          <Brain className="w-10 h-10 text-primary" />
-          Bloom's Taxonomy Quiz
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 font-medium text-lg">
-          Generate targeted MCQs based on different cognitive levels.
+    <div className="pb-12 space-y-8 max-w-5xl mx-auto">
+      <div className="mb-8 text-center">
+        <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
+          <Brain className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight">Bloom's Taxonomy Quiz</h1>
+        <p className="text-gray-500 mt-2 text-lg max-w-2xl mx-auto">
+          Test your mastery of a topic by progressing through the 6 levels of cognitive learning.
         </p>
       </div>
 
-      <GlassCard className="!p-0 overflow-hidden">
-        {/* Tabs */}
-        <div className="flex border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-          <button
-            onClick={() => setActiveTab("text")}
-            className={`flex-1 py-4 flex items-center justify-center gap-2 font-bold transition-colors ${
-              activeTab === "text" 
-                ? "text-primary border-b-2 border-primary bg-white dark:bg-gray-800" 
-                : "text-gray-500 hover:text-foreground-light dark:hover:text-foreground-dark"
-            }`}
-          >
-            <Type className="w-5 h-5" /> Text
-          </button>
-          <button
-            onClick={() => setActiveTab("file")}
-            className={`flex-1 py-4 flex items-center justify-center gap-2 font-bold transition-colors ${
-              activeTab === "file" 
-                ? "text-primary border-b-2 border-primary bg-white dark:bg-gray-800" 
-                : "text-gray-500 hover:text-foreground-light dark:hover:text-foreground-dark"
-            }`}
-          >
-            <FileText className="w-5 h-5" /> File
-          </button>
-          <button
-            onClick={() => setActiveTab("url")}
-            className={`flex-1 py-4 flex items-center justify-center gap-2 font-bold transition-colors ${
-              activeTab === "url" 
-                ? "text-primary border-b-2 border-primary bg-white dark:bg-gray-800" 
-                : "text-gray-500 hover:text-foreground-light dark:hover:text-foreground-dark"
-            }`}
-          >
-            <LinkIcon className="w-5 h-5" /> URL
-          </button>
-        </div>
-
-        <div className="p-6">
-          <AnimatePresence mode="wait">
-            {activeTab === "text" && (
-              <motion.div
-                key="text"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
+      {!selectedTopic ? (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <h2 className="text-xl font-bold text-gray-800 text-center mb-8">Select a Topic to Begin</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {bloomsQuizData.availableTopics.map((topic) => (
+              <button
+                key={topic.id}
+                onClick={() => setSelectedTopic(topic.id)}
+                className="group bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all text-left relative overflow-hidden"
               >
-                <textarea
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Paste your study material here (up to 5,000 words)..."
-                  className="w-full h-64 p-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground-light dark:text-foreground-dark resize-none font-medium"
-                />
-              </motion.div>
-            )}
-
-            {activeTab === "file" && (
-              <motion.div
-                key="file"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="w-full h-64 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-              >
-                <Upload className="w-10 h-10 text-gray-400 mb-4" />
-                <p className="font-bold text-foreground-light dark:text-foreground-dark mb-1">Click or drag file to this area to upload</p>
-                <p className="text-sm text-gray-500 font-medium">Supports PDF, DOCX, TXT (Max 10MB)</p>
-              </motion.div>
-            )}
-
-            {activeTab === "url" && (
-              <motion.div
-                key="url"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                <div className="relative">
-                  <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="url"
-                    placeholder="https://en.wikipedia.org/wiki/Photosynthesis"
-                    className="w-full pl-12 pr-4 py-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground-light dark:text-foreground-dark font-medium"
-                  />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
+                <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-4 relative z-10 group-hover:scale-110 transition-transform">
+                  {renderIcon(topic.icon)}
                 </div>
-                <p className="text-sm text-gray-500 mt-4 font-medium flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" /> We'll automatically extract the text from the webpage.
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-        
-        <div className="p-6 bg-gray-50/50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="w-full sm:w-auto flex items-center gap-3">
-            <label className="text-sm font-bold text-gray-500 whitespace-nowrap">Taxonomy Level:</label>
-            <select
-              value={bloomsLevel}
-              onChange={(e) => setBloomsLevel(e.target.value)}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 font-medium text-foreground-light dark:text-foreground-dark focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
-            >
-              {BLOOMS_LEVELS.map(level => (
-                <option key={level} value={level}>{level}</option>
-              ))}
-            </select>
+                <h3 className="font-bold text-gray-800 text-lg mb-1 relative z-10">{topic.name}</h3>
+                <p className="text-sm font-medium text-gray-500 relative z-10">{topic.count} Questions Available</p>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      ) : !quizStarted ? (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 text-center max-w-2xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Ready to test your knowledge?</h2>
+          <p className="text-gray-500 mb-8">You selected <span className="font-bold text-indigo-600">{bloomsQuizData.availableTopics.find(t => t.id === selectedTopic)?.name}</span></p>
+          
+          <div className="space-y-3 mb-8 text-left">
+            {bloomsQuizData.taxonomyLevels.map((level) => (
+              <div key={level.level} className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <div className={`w-8 h-8 rounded-lg ${level.color} text-white flex items-center justify-center font-bold shadow-sm`}>
+                  {level.level}
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-800">{level.name}</h4>
+                  <p className="text-xs text-gray-500">{level.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <button
-            onClick={handleGenerate}
-            disabled={loading || (activeTab === "text" && !inputText.trim())}
-            className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Generating...</>
-            ) : (
-              <><Sparkles className="w-5 h-5" /> Generate Quiz</>
-            )}
-          </button>
-        </div>
-      </GlassCard>
-    </motion.div>
+          <div className="flex gap-4 justify-center">
+            <button 
+              onClick={() => setSelectedTopic(null)}
+              className="px-6 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+            >
+              Change Topic
+            </button>
+            <button 
+              onClick={() => setQuizStarted(true)}
+              className="px-6 py-3 rounded-xl font-bold text-white bg-indigo-500 hover:bg-indigo-600 shadow-md shadow-indigo-500/30 transition-all flex items-center gap-2"
+            >
+              Start Quiz <Play className="w-4 h-4" />
+            </button>
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mx-auto space-y-6">
+          {/* Progress Bar */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between gap-4">
+            {bloomsQuizData.taxonomyLevels.map((level) => (
+              <div key={level.level} className="flex-1 flex flex-col items-center gap-2 relative">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm z-10 transition-colors ${
+                  currentLevel > level.level ? 'bg-green-500 text-white' : 
+                  currentLevel === level.level ? `${level.color} text-white shadow-lg scale-110` : 
+                  'bg-gray-100 text-gray-400'
+                }`}>
+                  {currentLevel > level.level ? <CheckCircle2 className="w-5 h-5" /> : level.level}
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-wider hidden sm:block ${currentLevel === level.level ? 'text-gray-800' : 'text-gray-400'}`}>
+                  {level.name}
+                </span>
+                {level.level < 6 && (
+                  <div className={`absolute top-5 left-1/2 w-full h-1 -translate-y-1/2 z-0 ${currentLevel > level.level ? 'bg-green-500' : 'bg-gray-100'}`}></div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Question Card */}
+          {currentQuestion && (
+            <motion.div key={currentLevel} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+              <div className="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 font-bold text-sm rounded-lg mb-6 uppercase tracking-wider">
+                Level {currentLevel}: {currentQuestion.levelName}
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-8 leading-relaxed">
+                {currentQuestion.question}
+              </h2>
+              
+              <div className="space-y-4">
+                <textarea 
+                  placeholder="Type your detailed answer here..."
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-5 text-gray-800 focus:ring-2 focus:ring-indigo-500/50 resize-none outline-none font-medium"
+                  rows={6}
+                ></textarea>
+                
+                <div className="flex justify-between items-center pt-4">
+                  <button className="text-sm font-bold text-gray-400 hover:text-indigo-500 transition-colors">
+                    Need a hint?
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (currentLevel < 6) setCurrentLevel(prev => prev + 1);
+                      else alert("Quiz Completed! Awesome job!");
+                    }}
+                    className="px-6 py-3 rounded-xl font-bold text-white bg-indigo-500 hover:bg-indigo-600 shadow-md shadow-indigo-500/30 transition-all flex items-center gap-2"
+                  >
+                    {currentLevel === 6 ? "Finish Quiz" : "Submit & Next"} <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </motion.div>
+      )}
+    </div>
   );
 }

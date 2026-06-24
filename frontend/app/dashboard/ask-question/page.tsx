@@ -1,17 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { 
-  Send, 
-  Sparkles, 
-  Search, 
-  Brain, 
-  Clock, 
-  Zap, 
-  Leaf, 
-  CheckCircle2, 
-  Activity, 
-  PieChart, 
+import {
+  Send,
+  Sparkles,
+  Search,
+  Brain,
+  Clock,
+  Zap,
+  Leaf,
+  CheckCircle2,
+  Activity,
+  PieChart,
   TrendingUp,
   Bookmark,
   Copy,
@@ -23,7 +23,7 @@ import {
   AlertCircle,
   Bot
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { askQuestionData } from "../../../data/askQuestionDummyData";
 
@@ -33,17 +33,69 @@ export default function AskQuestionPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchResult, setSearchResult] = useState<any>(null);
+  
+  const { statistics, recentSearches, recommendedTopics } = askQuestionData;
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([
+    "What is Artificial Intelligence and Machine Learning?",
+    "Explain how the virtual DOM works in React",
+    "What is the time complexity of sorting algorithms?"
+  ]);
+  const [autocompleteResults, setAutocompleteResults] = useState<string[]>([]);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
 
-  const { 
-    suggestedQuestions, 
-    statistics, 
-    recentSearches, 
-    recommendedTopics 
-  } = askQuestionData;
+  useEffect(() => {
+    // Fetch dynamic random suggestions from the database
+    const fetchSuggestions = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        
+        const res = await fetch("http://localhost:8000/api/questions/suggestions", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setDynamicSuggestions(data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch dynamic suggestions", err);
+      }
+    };
+    
+    fetchSuggestions();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (query.trim().length >= 2 && showAutocomplete) {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) return;
+          const res = await fetch(`http://localhost:8000/api/questions/autocomplete?q=${encodeURIComponent(query)}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setAutocompleteResults(data);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        setAutocompleteResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query, showAutocomplete]);
 
   const handleSend = async (questionText: string = query) => {
     if (!questionText.trim()) return;
     setQuery(questionText);
+    setShowAutocomplete(false);
+    setAutocompleteResults([]);
     setIsLoading(true);
     setError("");
     setSearchResult(null);
@@ -86,8 +138,8 @@ export default function AskQuestionPage() {
       topic: searchResult.topic || (searchResult.isDuplicate ? "Duplicate Detected" : "Unknown"),
       confidence: searchResult.confidence ? Math.round(searchResult.confidence * 100) : (searchResult.isDuplicate ? 100 : 0),
       similarity: searchResult.similarQuestions?.length > 0 ? searchResult.similarQuestions[0].similarity : (searchResult.isDuplicate ? searchResult.similarity : 0),
-      processingTime: "0.23 sec", 
-      complexity: "Intermediate" 
+      processingTime: "0.23 sec",
+      complexity: "Intermediate"
     },
     similarQuestions: searchResult.similarQuestions || [],
     chatResponse: searchResult.chatResponse,
@@ -111,13 +163,16 @@ export default function AskQuestionPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* MAIN COLUMN (Left/Center) */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           {/* SEARCH BOX */}
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
             <div className="relative">
-              <textarea 
+              <textarea
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setShowAutocomplete(true);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -129,7 +184,7 @@ export default function AskQuestionPage() {
                 rows={3}
                 disabled={isLoading}
               />
-              <button 
+              <button
                 onClick={() => handleSend()}
                 disabled={isLoading}
                 className="absolute bottom-5 right-5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white p-3 rounded-xl shadow-md transition-transform hover:scale-105 flex items-center gap-2 font-semibold"
@@ -137,20 +192,40 @@ export default function AskQuestionPage() {
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 <span className="hidden sm:inline">{isLoading ? "Sending..." : "Send"}</span>
               </button>
+              
+              {/* AUTOCOMPLETE DROPDOWN */}
+              {autocompleteResults.length > 0 && showAutocomplete && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-50">
+                  {autocompleteResults.map((res, i) => (
+                    <button 
+                      key={i}
+                      className="w-full text-left px-5 py-3 hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 font-medium text-sm transition-colors border-b border-gray-50 last:border-0 flex items-center gap-3"
+                      onClick={() => {
+                        setQuery(res);
+                        setShowAutocomplete(false);
+                        handleSend(res);
+                      }}
+                    >
+                      <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                      <span className="truncate">{res}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            
+
             {error && (
               <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm font-bold flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" /> {error}
               </div>
             )}
-            
+
             <div className="mt-5">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Suggested Questions</p>
               <div className="flex flex-wrap gap-2">
-                {suggestedQuestions.map((q, idx) => (
-                  <button 
-                    key={idx} 
+                {dynamicSuggestions.map((q, idx) => (
+                  <button
+                    key={idx}
                     className="px-4 py-2 bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 text-gray-600 rounded-full text-sm font-medium border border-gray-100 transition-colors"
                     onClick={() => handleSend(q)}
                     disabled={isLoading}
@@ -163,16 +238,49 @@ export default function AskQuestionPage() {
           </div>
 
           {isLoading && !displayData && (
-             <div className="bg-white rounded-3xl p-12 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-gray-400">
-               <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
-               <p className="font-bold text-lg">Analyzing your question...</p>
-             </div>
+            <div className="bg-white rounded-3xl p-12 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-gray-400">
+              <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+              <p className="font-bold text-lg">Analyzing your question...</p>
+            </div>
           )}
-
+          {/* SIMILAR QUESTIONS FOUND */}
+          {displayData && !displayData.isDuplicate && (
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+              {isLoading && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center"></div>
+              )}
+              <h3 className="font-bold text-gray-800 text-lg mb-6 flex items-center gap-2">
+                <Copy className="w-5 h-5 text-indigo-500" /> Similar Questions Found
+              </h3>
+              {displayData.similarQuestions.length === 0 ? (
+                <p className="text-gray-500 font-medium text-center py-6">No similar questions found yet. You're exploring new territory!</p>
+              ) : (
+                <div className="space-y-4">
+                  {displayData.similarQuestions.map((sq: any, idx: number) => (
+                    <div key={idx} className="group border border-gray-100 rounded-2xl p-5 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all cursor-pointer flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                        <Leaf className="w-6 h-6 text-green-500" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-gray-800 group-hover:text-indigo-600 transition-colors mb-1">{sq.question}</h4>
+                        <p className="text-xs text-gray-500 font-medium">Topic: {sq.topic}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-bold">
+                          {sq.similarity}%
+                        </div>
+                        <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Similar</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {/* RESULTS SECTION */}
           {displayData && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-              
+
               {/* AI CHAT RESPONSE */}
               {displayData.chatResponse && (
                 <div className={`bg-white rounded-3xl p-6 shadow-sm border ${displayData.isDuplicate ? 'border-orange-200 bg-orange-50/50' : 'border-indigo-100 bg-indigo-50/30'}`}>
@@ -187,6 +295,8 @@ export default function AskQuestionPage() {
                   </div>
                 </div>
               )}
+
+
 
               {/* DUPLICATE WARNING */}
               {displayData.isDuplicate && !displayData.chatResponse && (
@@ -213,10 +323,10 @@ export default function AskQuestionPage() {
                   <h3 className="font-bold text-gray-800 text-lg mb-6 flex items-center gap-2">
                     <Brain className="w-5 h-5 text-indigo-500" /> Question Analysis
                   </h3>
-                  
+
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                     <AnalysisStat title="Detected Topic" value={displayData.analysis.topic} icon={<Target className="w-4 h-4 text-green-500" />} />
-                    
+
                     <div className="col-span-2 md:col-span-1 border border-gray-100 rounded-2xl p-4 bg-gray-50/50">
                       <div className="flex items-center gap-2 mb-2">
                         <Activity className="w-4 h-4 text-purple-500" />
@@ -226,7 +336,7 @@ export default function AskQuestionPage() {
                         <span className="text-xl font-bold text-gray-800">{displayData.analysis.confidence}%</span>
                       </div>
                       <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <motion.div 
+                        <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${displayData.analysis.confidence}%` }}
                           className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
@@ -240,49 +350,13 @@ export default function AskQuestionPage() {
                   </div>
                 </div>
               )}
-
-              {/* SIMILAR QUESTIONS FOUND */}
-              {!displayData.isDuplicate && (
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
-                  {isLoading && (
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center"></div>
-                  )}
-                  <h3 className="font-bold text-gray-800 text-lg mb-6 flex items-center gap-2">
-                    <Copy className="w-5 h-5 text-indigo-500" /> Similar Questions Found
-                  </h3>
-                  {displayData.similarQuestions.length === 0 ? (
-                    <p className="text-gray-500 font-medium text-center py-6">No similar questions found yet. You're exploring new territory!</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {displayData.similarQuestions.map((sq: any, idx: number) => (
-                        <div key={idx} className="group border border-gray-100 rounded-2xl p-5 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all cursor-pointer flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                            <Leaf className="w-6 h-6 text-green-500" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-bold text-gray-800 group-hover:text-indigo-600 transition-colors mb-1">{sq.question}</h4>
-                            <p className="text-xs text-gray-500 font-medium">Topic: {sq.topic}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-bold">
-                              {sq.similarity}%
-                            </div>
-                            <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Similar</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* AI PROCESSING TIMELINE */}
               {!displayData.isDuplicate && (
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
                   <h3 className="font-bold text-gray-800 text-lg mb-6 flex items-center gap-2">
                     <Activity className="w-5 h-5 text-indigo-500" /> AI Processing Timeline
                   </h3>
-                  <div className="relative pl-4 space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-indigo-500 before:to-gray-100">
+                  {/* <div className="relative pl-4 space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-indigo-500 before:to-gray-100">
                     {[
                       { step: "Converting question to vector embedding" },
                       { step: "Searching indexed question database" },
@@ -298,7 +372,7 @@ export default function AskQuestionPage() {
                         </div>
                       </div>
                     ))}
-                  </div>
+                  </div> */}
                 </div>
               )}
 
@@ -309,14 +383,14 @@ export default function AskQuestionPage() {
 
         {/* SIDE COLUMN (Right) */}
         <div className="space-y-6">
-          
+
           {/* TOPIC INSIGHTS */}
           <div className="bg-gradient-to-b from-[#131421] to-[#1c1d30] rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full filter blur-2xl"></div>
             <h3 className="font-bold text-lg mb-6 flex items-center gap-2 relative z-10">
               <PieChart className="w-5 h-5 text-indigo-400" /> Topic Insights
             </h3>
-            
+
             {displayData ? (
               <>
                 <div className="mb-6 relative z-10">
@@ -338,7 +412,7 @@ export default function AskQuestionPage() {
                           <span className="text-indigo-300">{rt.match}%</span>
                         </div>
                         <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                          <motion.div 
+                          <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${rt.match}%` }}
                             className="h-full bg-gradient-to-r from-indigo-400 to-purple-400"
@@ -397,7 +471,7 @@ export default function AskQuestionPage() {
           </div>
 
           {/* RECOMMENDED TOPICS */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+          {/* <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
             <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-500" /> Recommended
             </h3>
@@ -408,7 +482,7 @@ export default function AskQuestionPage() {
                 </span>
               ))}
             </div>
-          </div>
+          </div> */}
 
           {/* QUICK ACTIONS */}
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
@@ -420,7 +494,7 @@ export default function AskQuestionPage() {
               <ActionButton icon={<Copy className="w-4 h-4" />} label="Copy" />
               <ActionButton icon={<Share2 className="w-4 h-4" />} label="Share" />
               <ActionButton icon={<RefreshCw className="w-4 h-4" />} label="Ask Another" />
-              <button 
+              <button
                 onClick={() => router.push("/dashboard/history")}
                 className="col-span-2 mt-2 w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-sm font-bold border border-gray-200 transition-colors flex items-center justify-center gap-2"
               >

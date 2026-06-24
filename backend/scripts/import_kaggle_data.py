@@ -77,12 +77,23 @@ def generate_sample_csv(filepath):
         "Explain the Pythagorean theorem.",
         "What is a derivative in calculus?",
         "How do you calculate the probability of independent events?",
-        # Computer Science
-        "How do neural networks learn?",
-        "What is the difference between a stack and a queue?",
-        "Explain object-oriented programming.",
-        "How does a basic electric circuit work?",
-        "What is time complexity and Big O notation?"
+        # Artificial Intelligence & Machine Learning
+        "What is Artificial Intelligence and Machine Learning?",
+        "How do you train a Neural Network?",
+        "Explain the difference between deep learning and traditional machine learning.",
+        "What is Natural Language Processing in AIML?",
+        "How does a Random Forest classifier work?",
+        # Web Development
+        "What is the difference between React and Next.js?",
+        "Explain how the virtual DOM works in React.",
+        "How do you create a RESTful API in Node.js?",
+        "What are the benefits of using Tailwind CSS?",
+        # Programming General
+        "What is object oriented programming and its 4 pillars?",
+        "How do pointers work in C/C++?",
+        "What is the difference between Python lists and tuples?",
+        "Explain time complexity and Big O notation.",
+        "How does garbage collection work in Java?"
     ]
     
     with open(filepath, mode='w', newline='', encoding='utf-8') as f:
@@ -100,10 +111,9 @@ def main():
         data_dir.mkdir(parents=True, exist_ok=True)
         
     csv_files = find_csv_files(data_dir)
-    if not csv_files:
-        sample_path = data_dir / 'sample_questions.csv'
-        generate_sample_csv(sample_path)
-        csv_files = [sample_path]
+    sample_path = data_dir / 'sample_questions.csv'
+    generate_sample_csv(sample_path) # Force regeneration of the new dataset
+    csv_files = [sample_path]
         
     all_questions = set()
     for csv_file in csv_files:
