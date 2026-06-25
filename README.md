@@ -1,86 +1,143 @@
 # LearnConnect AI: Semantic Question Finder & Auto-Tagger
 
-LearnConnect AI is an advanced, full-stack web application designed for students. It utilizes semantic similarity and local AI models to find related past questions, automatically tag topics, and generate intelligent suggestions—all without relying on paid external APIs.
+LearnConnect AI is an advanced, full-stack web application designed for students to search past questions, automatically tag study topics, and generate intelligent suggestions. 
+
+By utilizing remote Hugging Face Inference APIs, pure Python vector operations, and robust offline fallback algorithms, the backend operates with a near-zero memory footprint (<50 MB RAM)—making it fully compatible with Render's Free Tier limits (512MB).
+
+* **Live Application:** [LearnConnect Web App](https://learnconnect-h30n.onrender.com/dashboard/ask-question)
+* **Backend API URL:** `https://auto-tagging-gisul.onrender.com`
+* **GitHub Repository:** [Similar-Question-Finder-with-Auto-Tagging-GISUL](https://github.com/ADhanaseelan/Similar-Question-Finder-with-Auto-Tagging-GISUL.git)
+
+---
 
 ## 🚀 Features
 
-- **Semantic Question Search**: Enter a study question, and the system uses `sentence-transformers` locally to find semantically similar past questions.
-- **AI Auto-Tagging**: Questions are automatically assigned a topic (e.g., Biology, Computer Science) using a custom semantic classification system.
-- **Local AI Chatbot**: An offline `flan-t5-small` model running on the backend generates immediate, context-aware answers to user queries without OpenAI API keys.
-- **Interactive Knowledge Graph**: The dashboard features an advanced, physics-based data visualization mapping a user's semantic topic clustering over time.
-- **Secure Authentication**: Fully implemented JWT-based email/password authentication with bcrypt hashing, plus a seamless Google OAuth integration.
-- **Cloud Database**: All questions, similarities, and profile settings are securely stored in a Firebase Realtime Database (Free Tier NoSQL DB).
+- **Semantic Question Search**: Find related past questions based on their core *meaning* rather than exact keyword matches using `all-MiniLM-L6-v2` embeddings.
+- **AI Auto-Tagging**: Questions are automatically categorized into educational subjects (e.g., Biology, Calculus, Operating Systems, Polity) using cosine vector math over custom taxonomic seeds.
+- **Hugging Face LLM Generation**: Immediate context-aware answers and related follow-up study questions generated via `google/flan-t5-small`.
+- **Hybrid Similarity Fallbacks**: In case of rate limits or offline development, the system seamlessly falls back to local Jaccard/keyword-similarity algorithms.
+- **Interactive Knowledge Nodes**: Advanced, physics-based data visualizations mapping a user's semantic topic clusters over time using Framer Motion.
+- **Firebase Database**: Secure real-time cloud data store for questions, user history, and profiles.
 
-## 🛠 Tech Stack & Approach
+---
 
-- **Frontend**: Next.js 15 (React), Tailwind CSS, Framer Motion. 
-  - *Approach*: Built for extreme responsiveness. We use `AnimatePresence` and custom layouts to provide a buttery-smooth, native-app feel that masks any latency.
-- **Backend**: FastAPI (Python), Uvicorn.
-  - *Approach*: Chosen for high-performance async processing. We utilize PyTorch and HuggingFace's `transformers` library natively within API endpoints.
-- **AI/ML Library**: `sentence-transformers` (`all-MiniLM-L6-v2`) for blazing-fast 384-dimensional vector embeddings, and `flan-t5-small` for generative QA.
-- **Database**: Firebase Realtime Database.
-  - *Approach*: We use Firebase as a fast, free-tier NoSQL JSON store that perfectly handles hierarchical data like users -> questions -> similar questions.
+## 🔄 Project Architecture & Workflow
 
-## 🔄 How It Works (The Workflow)
+```mermaid
+graph TD
+    A[Next.js Client] -->|1. Submit Question| B(FastAPI Backend)
+    B -->|2a. If HF API Online: Fetch Embeddings| C(Hugging Face Inference API)
+    B -->|2b. If HF API Offline: Keyword Fallback| D[Pure Python Math Engine]
+    C -->|Return Vectors| D
+    D -->|3. Compare Cosine Similarity| E[(Firebase DB)]
+    E -->|Retrieve Clusters| B
+    B -->|4. Generate Explanations| F(Hugging Face LLM)
+    F -->|Return Text / Suggestions| A
+```
 
-1. **User Input**: A student logs in and asks a natural language study question (e.g., *"Why does photosynthesis need light?"*).
-2. **Local Embedding**: The FastAPI backend intercepts the question and uses `sentence-transformers` to locally convert the text into a dense 384-dimensional vector embedding.
-3. **Semantic Search & Clustering**: The backend compares this new vector against all previously stored questions in the Firebase database using Cosine Similarity, instantly identifying the Top 5 most semantically related questions.
-4. **Auto-Tagging**: The custom `TopicTagger` analyzes the vector against a fixed taxonomy (Biology, Math, Physics, etc.) to automatically assign the most accurate domain tag.
-5. **Local Chatbot Response**: An offline `flan-t5-small` model generates an immediate, context-aware answer.
-6. **Data Storage & Visualization**: The entire payload is saved to Firebase, which then powers a stunning physics-based "Semantic Knowledge Graph" on the user's dashboard.
+1. **User Request**: The student enters a natural language question in the Next.js React frontend.
+2. **Dynamic Request Interception**: In production, the client-side fetch interceptor rewrites `/api/` endpoints to target the Render FastAPI backend.
+3. **Remote Vectorization**: The backend fetches 384-dimensional sentence embeddings from Hugging Face's `all-MiniLM-L6-v2`. If the container network is not ready, the system utilizes a fast keyword-overlap classification.
+4. **Vector Similarity Ranking**: The backend computes cosine similarity metrics against historical questions using pure-Python vector math (eliminating bulky packages like PyTorch, numpy, and scikit-learn).
+5. **NoSQL Persistence**: The metadata, topic tag, and question clusters are saved to the Firebase Realtime Database.
 
-## ✨ Our Uniqueness
+---
 
-Unlike traditional study tools, LearnConnect AI is built entirely on **Edge/Local AI processing**. 
-- **100% Free & Private**: By running `sentence-transformers` and `flan-t5` natively within our Python backend, we bypassed the need for expensive, privacy-invasive paid APIs (like OpenAI or Claude). 
-- **Advanced Dynamic UI**: We completely discarded static charts in favor of custom, physics-based `framer-motion` knowledge graphs that adapt dynamically to a student's learning history.
-- **Human-in-the-Loop**: Our auto-tagging system provides high-confidence suggestions but allows students to easily override topics, seamlessly refining their personal knowledge clusters.
+## 🛠 Tech Stack
 
-## 🆚 Comparison to Existing Models
+* **Frontend**: Next.js 15, Tailwind CSS, Framer Motion
+* **Backend**: FastAPI (Python 3.9+), Uvicorn
+* **Database**: Firebase Realtime Database (NoSQL JSON store)
+* **Model Inference**: Hugging Face Inference API (`all-MiniLM-L6-v2` & `google/flan-t5-small`)
 
-| Feature | Existing/Traditional Study Platforms (e.g., Quizlet, Microsoft Q&A) | LearnConnect AI |
-| :--- | :--- | :--- |
-| **Search Mechanism** | Keyword-based matching (fails if synonyms are used). | **Semantic Vector Similarity** (understands the *meaning* behind the question). |
-| **Auto-Tagging** | Usually manual tagging required, or relies on paid third-party AI APIs. | **Fully Automatic Local Classification** running completely offline. |
-| **Data Privacy** | Sends user data to third-party LLM providers (OpenAI). | **100% Private Processing** inside the secure FastAPI backend. |
-| **Visualizations** | Basic static bar charts or pie charts. | **Interactive, physics-based Knowledge Nodes** that pulse and scale dynamically. |
-| **Cost** | High operational costs due to API token usage. | **Zero AI API Costs**. Completely self-contained open-source stack. |
+---
 
-## 📦 Setup & Installation
+## 💻 Local Development Setup
 
-### 1. Backend (Python)
-Ensure Python 3.10+ is installed.
+### Prerequisites
+* **Python 3.9+** (Fully compatible with type-hint specifications)
+* **Node.js 18+**
+
+### 1. Backend Setup
+Create a virtual environment, install the lightweight dependencies, and run:
 ```bash
 cd backend
-python -m venv .venv
-# Activate virtual environment
-source .venv/bin/activate  # Mac/Linux
-.venv\Scripts\activate     # Windows
+python3 -m venv .venv
 
-# Install dependencies
+# Activate Virtual Environment
+# Mac/Linux:
+source .venv/bin/activate
+# Windows:
+.venv\Scripts\activate
+
+# Install requirements
 pip install -r requirements.txt
 
-# Start the FastAPI server
-python main.py
+# Run server
+python3 main.py
 ```
-*Note: The first run will download the open-source Hugging Face models (~300MB).*
+Create a `backend/.env` file with the following keys:
+```env
+FIREBASE_DB_URL=https://<your-db-name>.firebasedatabase.app
+SECRET_KEY=yoursecretkeyhere
+JWT_EXPIRE_DAYS=7
+HF_TOKEN= # Optional: Your Hugging Face API Token (for higher rate-limits)
+```
+Add your Firebase service account JSON credentials to `backend/serviceAccountKey.json`.
 
-### 2. Frontend (Next.js)
-Ensure Node.js 18+ is installed.
+### 2. Frontend Setup
+Install package dependencies and launch the dev server:
 ```bash
 cd frontend
 npm install
+npm run dev
+```
+Create a `frontend/.env.local` containing your public Firebase configuration keys:
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_db_name.firebasedatabase.app
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 
-# Start the development server
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+```
+
+### 3. Concurrent Execution (Full Stack)
+Alternatively, you can run both servers concurrently from the root directory:
+```bash
 npm run dev
 ```
 
-## 🚀 Deployment
-
-The project is fully prepared for one-click deployment:
-- **Frontend (Vercel)**: Connect your GitHub repo to Vercel. Vercel will automatically detect the Next.js framework in the `frontend` directory.
-- **Backend (Render)**: The root directory contains a `render.yaml` file configured as a Blueprint. Simply connect this repository to Render and it will provision a Web Service for the FastAPI backend automatically.
-
 ---
-*Developed to strictly comply with the Option B specification, demonstrating mastery of full-stack integration and offline ML processing.*
+
+## 🌐 Production Deployment
+
+### 1. Backend Deployment (Render)
+1. Set up a **Web Service** on Render pointing to your GitHub repository.
+2. Select **Python** as the environment.
+3. Configure the build parameters:
+   * **Root Directory**: `backend`
+   * **Build Command**: `pip install -r requirements.txt`
+   * **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Add the following environment variables:
+   * `FIREBASE_CREDENTIALS`: Paste the *entire contents* of your `serviceAccountKey.json` file. The backend automatically cleans up any escaped newline formatting.
+   * `FIREBASE_DB_URL`: Your Realtime Database URL.
+   * `SECRET_KEY`: A secure signing key.
+
+### 2. Frontend Deployment (Netlify / Vercel / Render Static Site)
+Your frontend compiles as a dynamic web application.
+1. Deploy your frontend repository (setting the build directory to the `frontend` folder).
+2. Set the build parameters:
+   * **Build Command**: `npm install && npm run build`
+   * **Start Command**: `npm run start`
+3. Define the build-time environment variable:
+   * `NEXT_PUBLIC_BACKEND_URL`: `https://auto-tagging-gisul.onrender.com`
+
+### 3. Firebase Authorized Domains configuration
+Because Firebase Authentication locks out requests from unauthorized domains, you must register your frontend hosting URL:
+1. Go to **Firebase Console** -> **Authentication** -> **Settings** -> **Authorized Domains**.
+2. Click **Add domain** and enter your production frontend URL (e.g. `learnconnect-h30n.onrender.com`).
