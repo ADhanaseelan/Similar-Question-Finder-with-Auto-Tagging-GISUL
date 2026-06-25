@@ -26,20 +26,129 @@ By utilizing remote Hugging Face Inference APIs, pure Python vector operations, 
 ```mermaid
 graph TD
     A[Next.js Client] -->|1. Submit Question| B(FastAPI Backend)
-    B -->|2a. If HF API Online: Fetch Embeddings| C(Hugging Face Inference API)
-    B -->|2b. If HF API Offline: Keyword Fallback| D[Pure Python Math Engine]
-    C -->|Return Vectors| D
+    B -->|2a. HF API Online| C(Hugging Face Inference API)
+    B -->|2b. HF API Offline| D[Pure Python Local Fallback]
+    C -->|Return 384-dim Embedding| D
     D -->|3. Compare Cosine Similarity| E[(Firebase DB)]
-    E -->|Retrieve Clusters| B
-    B -->|4. Generate Explanations| F(Hugging Face LLM)
+    E -->|Fetch Stored Questions| B
+    B -->|4. Generate Chat & Suggestions| F(Hugging Face LLM)
     F -->|Return Text / Suggestions| A
 ```
 
-1. **User Request**: The student enters a natural language question in the Next.js React frontend.
-2. **Dynamic Request Interception**: In production, the client-side fetch interceptor rewrites `/api/` endpoints to target the Render FastAPI backend.
-3. **Remote Vectorization**: The backend fetches 384-dimensional sentence embeddings from Hugging Face's `all-MiniLM-L6-v2`. If the container network is not ready, the system utilizes a fast keyword-overlap classification.
-4. **Vector Similarity Ranking**: The backend computes cosine similarity metrics against historical questions using pure-Python vector math (eliminating bulky packages like PyTorch, numpy, and scikit-learn).
-5. **NoSQL Persistence**: The metadata, topic tag, and question clusters are saved to the Firebase Realtime Database.
+### Detailed Workflow Step-by-Step:
+1. **Student Queries**: A user submits a study question (e.g., *"How do memory leaks occur in C++?"*) on the dashboard.
+2. **FastAPI Ingestion**: The request hits the backend. In production, a React interceptor directs all `/api/` traffic to the Render service.
+3. **Embedding Vectorization**:
+   * *Online Mode*: The backend sends the text to Hugging Face Inference API and receives a 384-dimensional vector embedding.
+   * *Offline Fallback*: If the API times out, the backend falls back to keyword Jaccard token matching.
+4. **Auto-Tagging & Cosine Matching**:
+   * The backend compares the embedding vector against pre-configured topic seed vectors (Biology, Operating Systems, Math, etc.) using dot-product vector math to predict the domain tag.
+   * Simultaneously, it performs a cosine similarity lookup against all global questions stored in Firebase to locate the top 5 most similar entries.
+5. **Generative suggestions**: The backend queries Hugging Face's `google/flan-t5-small` to retrieve a suggested study answer and two relevant follow-up questions.
+6. **NoSQL Persistence**: The metadata is saved in real-time to Firebase and served back to render the interactive Knowledge Graph.
+
+---
+
+## 🗄 Firebase Realtime Database NoSQL Schema
+
+Since Firebase Realtime Database is a JSON-based NoSQL tree, data is structured hierarchically. The schema is divided into four main root keys:
+
+### 1. User Profiles (`/users`)
+Stores authenticated user records (synced with Firebase Auth ID):
+```json
+{
+  "users": {
+    "USER_ID_1": {
+      "uid": "USER_ID_1",
+      "email": "student@example.com",
+      "name": "Jane Doe",
+      "created_at": "2026-06-25T12:00:00Z"
+    }
+  }
+}
+```
+
+### 2. Asked Questions (`/questions`)
+Stores individual questions asked by students. Each question includes its text, AI-assigned topic, computed vector embeddings, generated answer, and follow-up suggestions:
+```json
+{
+  "questions": {
+    "USER_ID_1": {
+      "QUESTION_ID_1": {
+        "id": "QUESTION_ID_1",
+        "question": "How do memory leaks occur in C++?",
+        "topic": "C/C++ Programming",
+        "embedding": [0.0321, -0.0104, 0.0892, "... 384 dimensions"],
+        "answer": "Memory leaks in C++ occur when dynamically allocated memory on the heap is not deallocated using the delete keyword...",
+        "suggestions": [
+          "How can smart pointers prevent memory leaks?",
+          "What is the difference between stack and heap memory?"
+        ],
+        "created_at": "2026-06-25T12:01:00Z"
+      }
+    },
+    "kaggle_seed": {
+      "SEED_ID_1": {
+        "id": "SEED_ID_1",
+        "question": "What is the mitochondria's function in a cell?",
+        "topic": "Biology",
+        "embedding": [-0.0124, 0.0452, -0.0761, "..."]
+      }
+    }
+  }
+}
+```
+
+### 3. Bookmarks (`/saved_questions`)
+Keeps track of questions bookmarked/saved by the student for quick review:
+```json
+{
+  "saved_questions": {
+    "USER_ID_1": {
+      "QUESTION_ID_1": {
+        "id": "QUESTION_ID_1",
+        "question": "How do memory leaks occur in C++?",
+        "topic": "C/C++ Programming",
+        "saved_at": "2026-06-25T12:05:00Z"
+      }
+    }
+  }
+}
+```
+
+### 4. Custom Study Notes (`/notes`) & Quizzes (`/quizzes`)
+Contains text notes and dynamically generated quizzes categorized under topic nodes:
+```json
+{
+  "notes": {
+    "USER_ID_1": {
+      "NOTE_ID_1": {
+        "id": "NOTE_ID_1",
+        "title": "C++ Memory Allocations",
+        "content": "Always use smart pointers (std::unique_ptr, std::shared_ptr) to avoid manual deallocations.",
+        "topic": "C/C++ Programming",
+        "updated_at": "2026-06-25T12:10:00Z"
+      }
+    }
+  },
+  "quizzes": {
+    "USER_ID_1": {
+      "QUIZ_ID_1": {
+        "id": "QUIZ_ID_1",
+        "score": 80,
+        "topic": "C/C++ Programming",
+        "questions": [
+          {
+            "question": "Which pointer automatically deallocates memory?",
+            "options": ["raw pointer", "unique_ptr", "void pointer"],
+            "correct_option": 1
+          }
+        ]
+      }
+    }
+  }
+}
+```
 
 ---
 
@@ -128,8 +237,8 @@ npm run dev
    * `FIREBASE_DB_URL`: Your Realtime Database URL.
    * `SECRET_KEY`: A secure signing key.
 
-### 2. Frontend Deployment (Netlify / Vercel / Render Static Site)
-Your frontend compiles as a dynamic web application.
+### 2. Frontend Deployment (Netlify / Vercel / Render Web Service)
+Your frontend compiles as a dynamic Node.js server.
 1. Deploy your frontend repository (setting the build directory to the `frontend` folder).
 2. Set the build parameters:
    * **Build Command**: `npm install && npm run build`
