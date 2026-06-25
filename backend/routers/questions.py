@@ -22,10 +22,10 @@ async def search_similar(
     tagger = request.app.state.tagger
 
     # 1. Generate embedding
-    embedding = embedder.encode(payload.question).tolist()
+    embedding = embedder.encode(payload.question)
 
     # 2. Check for duplicate
-    dup = await check_duplicate(db_service, embedding, user.id, threshold=0.90)
+    dup = await check_duplicate(db_service, embedding, user.id, threshold=0.90, question_text=payload.question)
     is_duplicate = False
     duplicate_question = None
     similarity_score = None
@@ -36,7 +36,7 @@ async def search_similar(
         similarity_score = round(dup['score'] * 100, 1)
 
     # 3. Find top 5 similar
-    similar = await find_similar(db_service, embedding, user.id, top_k=5)
+    similar = await find_similar(db_service, embedding, user.id, top_k=5, question_text=payload.question)
 
     # 4. Classify topic
     topic, confidence, alternatives = tagger.classify(payload.question, embedder)

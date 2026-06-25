@@ -1,4 +1,4 @@
-import numpy as np
+import math
 from services.embedding_service import EmbeddingService
 
 TOPIC_SEEDS = {
@@ -46,32 +46,85 @@ TOPIC_SEEDS = {
 class TopicTagger:
     def __init__(self, embedder: EmbeddingService):
         self._labels = list(TOPIC_SEEDS.keys())
-        # Precompute vectors for topics
-        self._topic_vecs = np.stack([
-            embedder.encode(text) for text in TOPIC_SEEDS.values()
-        ])
+        self._topic_vecs = None
+        
+        # Try to batch precompute topic seed vectors
+        try:
+            print("[TopicTagger] Precomputing topic seed vectors via Hugging Face...")
+            seeds = list(TOPIC_SEEDS.values())
+            vecs = embedder.encode_batch(seeds)
+            if vecs and all(len(v) > 0 for v in vecs):
+                self._topic_vecs = vecs
+                print("[TopicTagger] Successfully precomputed all topic vectors!")
+            else:
+                print("[TopicTagger] Batch encoding returned empty/invalid vectors. Will use keyword fallback.")
+        except Exception as e:
+            print(f"[TopicTagger] Error precomputing topic vectors: {e}. Using keyword fallback.")
 
-    def classify(self, question: str, embedder: EmbeddingService) -> tuple[str, float, list[dict]]:
-        q_vec = embedder.encode(question)
-        # Cosine similarity (dot product of normalized vectors)
-        scores = self._topic_vecs @ q_vec
+    def classify_keyword(self, question: str) -> tuple[str, float, list[dict]]:
+        q_words = set(word.lower() for word in question.split() if len(word) > 2)
+        scores = {}
+        for topic, seeds in TOPIC_SEEDS.items():
+            seed_words = set(seeds.lower().split())
+            match_count = len(q_words.intersection(seed_words))
+            scores[topic] = match_count
         
-        # Softmax-like confidence distribution to make it look realistic
-        exp_scores = np.exp(scores * 5)
-        probabilities = exp_scores / exp_scores.sum()
+        # Sort topics by score
+        sorted_topics = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        best_topic, best_score = sorted_topics[0]
         
-        # Get top 5 indices
-        top_indices = np.argsort(probabilities)[::-1][:5]
-        
-        best_idx = int(top_indices[0])
-        topic = self._labels[best_idx]
-        confidence = float(probabilities[best_idx])
+        # Calculate a rough confidence score (best_score / total_score)
+        total = sum(scores.values())
+        confidence = best_score / total if total > 0 else 1.0 / len(TOPIC_SEEDS)
         
         alternatives = []
-        for idx in top_indices[1:]:
+        for t, s in sorted_topics[1:5]:
             alternatives.append({
-                "topic": self._labels[int(idx)],
-                "confidence": float(probabilities[idx])
+                "topic": t,
+                "confidence": s / total if total > 0 else 0.0
+            })
+            
+        return best_topic, confidence, alternatives
+
+    def classify_vector(self, q_vec: list[float]) -> tuple[str, float, list[dict]]:
+        scores = []
+        for t_vec in self._topic_vecs:
+            # Cosine similarity (dot product since they are normalized)
+            dot = sum(x * y for x, y in zip(t_vec, q_vec))
+            scores.append(dot)
+            
+        # Softmax-like confidence distribution to make it look realistic
+        exp_scores = []
+        for s in scores:
+            try:
+                exp_scores.append(math.exp(s * 5))
+            except OverflowError:
+                exp_scores.append(float('inf'))
+                
+        sum_exp = sum(exp_scores)
+        probabilities = [e / sum_exp if sum_exp > 0 else 0.0 for e in exp_scores]
+        
+        ranked_indices = sorted(range(len(probabilities)), key=lambda i: probabilities[i], reverse=True)
+        
+        best_idx = ranked_indices[0]
+        topic = self._labels[best_idx]
+        confidence = probabilities[best_idx]
+        
+        alternatives = []
+        for idx in ranked_indices[1:5]:
+            alternatives.append({
+                "topic": self._labels[idx],
+                "confidence": probabilities[idx]
             })
             
         return topic, confidence, alternatives
+
+    def classify(self, question: str, embedder: EmbeddingService) -> tuple[str, float, list[dict]]:
+        if self._topic_vecs:
+            q_vec = embedder.encode(question)
+            if q_vec and len(q_vec) > 0:
+                return self.classify_vector(q_vec)
+                
+        # Fallback to keyword matching
+        print("[TopicTagger] Using keyword-based classification fallback.")
+        return self.classify_keyword(question)

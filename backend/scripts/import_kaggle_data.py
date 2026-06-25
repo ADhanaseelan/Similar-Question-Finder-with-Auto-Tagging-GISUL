@@ -148,10 +148,11 @@ def main():
         updates = {}
         for q in batch:
             # 1. Embed
-            embedding = embedder.encode(q).tolist()
+            emb = embedder.encode(q)
+            embedding = emb.tolist() if hasattr(emb, "tolist") else emb
             
             # 2. Tag
-            topic, confidence = tagger.classify(q, embedder)
+            topic, confidence, _ = tagger.classify(q, embedder)
             
             # 3. Prepare for Firebase
             # We use a sanitized hash of the question as the key to prevent duplicates
