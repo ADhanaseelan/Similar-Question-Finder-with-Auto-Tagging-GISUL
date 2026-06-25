@@ -120,6 +120,19 @@ class TopicTagger:
         return topic, confidence, alternatives
 
     def classify(self, question: str, embedder: EmbeddingService) -> tuple[str, float, list[dict]]:
+        if not self._topic_vecs:
+            try:
+                print("[TopicTagger] Attempting to precompute topic seed vectors lazily...")
+                seeds = list(TOPIC_SEEDS.values())
+                vecs = embedder.encode_batch(seeds)
+                if vecs and all(len(v) > 0 for v in vecs):
+                    self._topic_vecs = vecs
+                    print("[TopicTagger] Successfully precomputed topic vectors lazily!")
+                else:
+                    print("[TopicTagger] Lazy batch encoding returned empty/invalid vectors.")
+            except Exception as e:
+                print(f"[TopicTagger] Error in lazy precomputation: {e}")
+
         if self._topic_vecs:
             q_vec = embedder.encode(question)
             if q_vec and len(q_vec) > 0:
