@@ -2,8 +2,6 @@
 const isProd = process.env.NODE_ENV === 'production';
 
 const nextConfig = {
-    // Only use static export during the production build
-    ...(isProd ? { output: 'export' } : {}),
     images: {
         unoptimized: true
     },
