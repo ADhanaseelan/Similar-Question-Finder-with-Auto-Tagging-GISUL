@@ -1,4 +1,5 @@
 import math
+from typing import Optional
 
 def dot_product(v1, v2):
     return sum(x * y for x, y in zip(v1, v2))
@@ -81,7 +82,7 @@ async def check_duplicate(
     user_id: str,
     threshold: float = 0.90,
     question_text: str = ""
-) -> dict | None:
+) -> Optional[dict]:
     results = await find_similar(
         db_service, 
         query_embedding, 
