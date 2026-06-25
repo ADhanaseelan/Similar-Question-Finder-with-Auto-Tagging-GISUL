@@ -32,7 +32,7 @@ export default function SettingsPage() {
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
-        const res = await fetch("http://localhost:8000/api/users/me", {
+        const res = await fetch("/api/users/me", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -49,7 +49,7 @@ export default function SettingsPage() {
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
-        const res = await fetch("http://localhost:8000/api/dashboard/taxonomy", {
+        const res = await fetch("/api/dashboard/taxonomy", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -73,7 +73,7 @@ export default function SettingsPage() {
     setProfileMessage({ text: "", type: "" });
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8000/api/users/me", {
+      const res = await fetch("/api/users/me", {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ displayName: displayNameInput })
@@ -93,7 +93,7 @@ export default function SettingsPage() {
     setSecurityMessage({ text: "", type: "" });
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8000/api/auth/password", {
+      const res = await fetch("/api/auth/password", {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })

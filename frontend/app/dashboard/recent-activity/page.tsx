@@ -11,7 +11,7 @@ export default function RecentActivityPage() {
     const fetchActivity = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:8000/api/questions/activity", {
+        const res = await fetch("/api/questions/activity", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {

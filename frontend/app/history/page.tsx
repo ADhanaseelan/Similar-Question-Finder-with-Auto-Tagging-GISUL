@@ -38,8 +38,8 @@ export default function HistoryPage() {
       }
 
       const url = topic === "All" 
-        ? "http://localhost:8000/api/history/"
-        : `http://localhost:8000/api/history/${topic}`;
+        ? "/api/history/"
+        : `/api/history/${topic}`;
 
       const res = await fetch(url, {
         headers: {

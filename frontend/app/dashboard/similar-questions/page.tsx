@@ -17,14 +17,14 @@ export default function SimilarQuestionsPage() {
         const headers = { "Authorization": `Bearer ${token}` };
         
         // Fetch global bank
-        const resBank = await fetch("http://localhost:8000/api/questions/global-bank", { headers });
+        const resBank = await fetch("/api/questions/global-bank", { headers });
         if (resBank.ok) {
           const data = await resBank.json();
           setQuestions(data);
         }
         
         // Fetch currently saved to show active state
-        const resSaved = await fetch("http://localhost:8000/api/questions/saved", { headers });
+        const resSaved = await fetch("/api/questions/saved", { headers });
         if (resSaved.ok) {
           const savedData = await resSaved.json();
           setSavedQuestions(new Set(savedData.map((s: any) => s.id)));
@@ -48,7 +48,7 @@ export default function SimilarQuestionsPage() {
       
       if (savedQuestions.has(q.id)) {
         // Unsave
-        const res = await fetch(`http://localhost:8000/api/questions/saved/${q.id}`, { method: "DELETE", headers });
+        const res = await fetch(`/api/questions/saved/${q.id}`, { method: "DELETE", headers });
         if (res.ok) {
           setSavedQuestions(prev => {
             const next = new Set(prev);
@@ -58,7 +58,7 @@ export default function SimilarQuestionsPage() {
         }
       } else {
         // Save
-        const res = await fetch("http://localhost:8000/api/questions/saved", { 
+        const res = await fetch("/api/questions/saved", { 
           method: "POST", 
           headers,
           body: JSON.stringify({ id: q.id, question: q.question, topic: q.topic })

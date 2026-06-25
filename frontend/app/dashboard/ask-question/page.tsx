@@ -135,7 +135,7 @@ export default function AskQuestionPage() {
         try {
           const token = localStorage.getItem("token");
           if (!token) return;
-          const res = await fetch(`http://localhost:8000/api/questions/autocomplete?q=${encodeURIComponent(query)}`, {
+          const res = await fetch(`/api/questions/autocomplete?q=${encodeURIComponent(query)}`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
           if (res.ok) {
@@ -168,7 +168,7 @@ export default function AskQuestionPage() {
         return;
       }
 
-      const res = await fetch("http://localhost:8000/api/questions/search", {
+      const res = await fetch("/api/questions/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -238,7 +238,7 @@ export default function AskQuestionPage() {
     if (!searchResult || !searchResult.questionId) return;
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8000/api/questions/${searchResult.questionId}/topic`, {
+      const res = await fetch(`/api/questions/${searchResult.questionId}/topic`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

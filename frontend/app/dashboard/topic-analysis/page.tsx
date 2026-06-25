@@ -21,7 +21,7 @@ export default function TopicAnalysisPage() {
         const token = localStorage.getItem("token");
         if (!token) return router.push("/login");
 
-        const res = await fetch("http://localhost:8000/api/dashboard/topic-analysis", {
+        const res = await fetch("/api/dashboard/topic-analysis", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {

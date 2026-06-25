@@ -65,7 +65,7 @@ export default function ChatAskPage() {
         return;
       }
 
-      const res = await fetch("http://localhost:8000/api/questions/search", {
+      const res = await fetch("/api/questions/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

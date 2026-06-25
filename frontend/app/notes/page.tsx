@@ -26,7 +26,7 @@ export default function NotesPage() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await fetch("http://localhost:8000/api/notes", {
+      const res = await fetch("/api/notes", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -57,7 +57,7 @@ export default function NotesPage() {
         return;
       }
 
-      const res = await fetch("http://localhost:8000/api/notes", {
+      const res = await fetch("/api/notes", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

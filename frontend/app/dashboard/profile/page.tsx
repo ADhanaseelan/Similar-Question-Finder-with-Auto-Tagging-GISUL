@@ -20,7 +20,7 @@ export default function ProfilePage() {
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
-        const res = await fetch("http://localhost:8000/api/users/me", {
+        const res = await fetch("/api/users/me", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -46,7 +46,7 @@ export default function ProfilePage() {
     setMessage({ text: "", type: "" });
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8000/api/users/me", {
+      const res = await fetch("/api/users/me", {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ displayName: formData.name })

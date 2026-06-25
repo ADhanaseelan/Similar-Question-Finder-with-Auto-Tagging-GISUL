@@ -21,7 +21,7 @@ export default function DashboardLayout({
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
-        const res = await fetch("http://localhost:8000/api/users/me", {
+        const res = await fetch("/api/users/me", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {

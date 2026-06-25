@@ -11,7 +11,7 @@ export default function QuestionsPage() {
     const fetchHistory = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:8000/api/questions/history", {
+        const res = await fetch("/api/questions/history", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
