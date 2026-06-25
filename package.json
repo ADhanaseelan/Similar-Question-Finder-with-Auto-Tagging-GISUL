@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Root package for starting the full stack application",
   "scripts": {
-    "dev": "npx concurrently -c \"blue,green\" -n \"backend,frontend\" \"cd backend && python main.py\" \"cd frontend && npm run dev\"",
+    "dev": "npx concurrently -c \"blue,green\" -n \"backend,frontend\" \"cd backend && python3 main.py\" \"cd frontend && npm run dev\"",
     "build": "npm run build --prefix frontend"
   }
 }
