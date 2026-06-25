@@ -15,6 +15,8 @@ def connect_db():
     if env_creds:
         try:
             cred_dict = json.loads(env_creds)
+            if "private_key" in cred_dict:
+                cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
             cred = credentials.Certificate(cred_dict)
             print("[DB] Loaded Firebase credentials from Environment Variable.")
         except Exception as e:
