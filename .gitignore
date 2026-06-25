@@ -13,6 +13,9 @@ __pycache__/
 env/
 venv/
 .env
+.env.local
+.env.*.local
+.venv/
 
 # Secrets / Credentials
 serviceAccountKey.json

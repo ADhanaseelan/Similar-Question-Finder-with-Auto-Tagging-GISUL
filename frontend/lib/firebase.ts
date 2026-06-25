@@ -4,14 +4,14 @@ import { getDatabase } from "firebase/database";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCRNAIf3s94UdrmTuLKqyNnA3bezzvxb3w",
-  authDomain: "auto-tagging-2ceba.firebaseapp.com",
-  databaseURL: "https://auto-tagging-2ceba-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "auto-tagging-2ceba",
-  storageBucket: "auto-tagging-2ceba.firebasestorage.app",
-  messagingSenderId: "460084508955",
-  appId: "1:460084508955:web:edddb07e2643dc9708bbbe",
-  measurementId: "G-9QBC5GD2Q1"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCRNAIf3s94UdrmTuLKqyNnA3bezzvxb3w",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "auto-tagging-2ceba.firebaseapp.com",
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://auto-tagging-2ceba-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "auto-tagging-2ceba",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "auto-tagging-2ceba.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "460084508955",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:460084508955:web:edddb07e2643dc9708bbbe",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-9QBC5GD2Q1"
 };
 
 // Initialize Firebase
