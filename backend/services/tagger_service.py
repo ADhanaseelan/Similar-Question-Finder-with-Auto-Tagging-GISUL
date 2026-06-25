@@ -47,19 +47,8 @@ class TopicTagger:
     def __init__(self, embedder: EmbeddingService):
         self._labels = list(TOPIC_SEEDS.keys())
         self._topic_vecs = None
-        
-        # Try to batch precompute topic seed vectors
-        try:
-            print("[TopicTagger] Precomputing topic seed vectors via Hugging Face...")
-            seeds = list(TOPIC_SEEDS.values())
-            vecs = embedder.encode_batch(seeds)
-            if vecs and all(len(v) > 0 for v in vecs):
-                self._topic_vecs = vecs
-                print("[TopicTagger] Successfully precomputed all topic vectors!")
-            else:
-                print("[TopicTagger] Batch encoding returned empty/invalid vectors. Will use keyword fallback.")
-        except Exception as e:
-            print(f"[TopicTagger] Error precomputing topic vectors: {e}. Using keyword fallback.")
+        print("[TopicTagger] Initialized (topic vectors will be lazily precomputed on first request).")
+
 
     def classify_keyword(self, question: str) -> tuple[str, float, list[dict]]:
         q_words = set(word.lower() for word in question.split() if len(word) > 2)
